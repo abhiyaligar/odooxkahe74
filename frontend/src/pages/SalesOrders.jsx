@@ -10,7 +10,8 @@ import {
   ShoppingBag, 
   PackageOpen,
   TrendingDown,
-  Loader2
+  Loader2,
+  Filter
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
@@ -23,6 +24,8 @@ export default function SalesOrders() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [customerFilter, setCustomerFilter] = useState("ALL");
   
   // Create New Order Form States
   const [customerSelect, setCustomerSelect] = useState("");
@@ -99,11 +102,16 @@ export default function SalesOrders() {
     }
   }, [salesOrders, selectedOrder?.id]);
 
-  // Filter Sales Orders based on search query
+  // Filter Sales Orders based on search query and other filters
   const filteredOrders = salesOrders.filter(so => {
     const customer = customers.find(c => c.id === so.customer_id);
-    return so.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = so.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
            (customer && customer.name.toLowerCase().includes(searchQuery.toLowerCase()));
+           
+    const matchesStatus = statusFilter === "ALL" || so.status === statusFilter;
+    const matchesCustomer = customerFilter === "ALL" || so.customer_id === customerFilter;
+    
+    return matchesSearch && matchesStatus && matchesCustomer;
   });
 
   const getOrderTotal = (so) => {
@@ -313,6 +321,40 @@ export default function SalesOrders() {
             <span>New Sales Order</span>
           </button>
         )}
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Status Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        {/* Customer Filter */}
+        <div className="relative min-w-[180px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={customerFilter}
+            onChange={(e) => setCustomerFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Customers</option>
+            {customers.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Orders List Table */}

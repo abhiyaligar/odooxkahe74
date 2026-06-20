@@ -13,7 +13,8 @@ import {
   AlertTriangle, 
   Info,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Filter
 } from 'lucide-react';
 
 export default function Manufacturing() {
@@ -34,6 +35,8 @@ export default function Manufacturing() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [productFilter, setProductFilter] = useState("ALL");
   const [errorMessage, setErrorMessage] = useState("");
 
   const createMoMutation = useMutation({
@@ -151,8 +154,13 @@ export default function Manufacturing() {
   // Filter Manufacturing Orders
   const filteredMos = manufacturingOrders.filter(mo => {
     const product = products.find(p => p.id === mo.product_id);
-    return mo.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = mo.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
            (product && product.name.toLowerCase().includes(searchQuery.toLowerCase()));
+           
+    const matchesStatus = statusFilter === "ALL" || mo.status === statusFilter;
+    const matchesProduct = productFilter === "ALL" || mo.product_id === productFilter;
+    
+    return matchesSearch && matchesStatus && matchesProduct;
   });
 
   const handleRowClick = (mo) => {
@@ -308,6 +316,41 @@ export default function Manufacturing() {
             <span>New Manufacturing Order</span>
           </button>
         )}
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Status Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="InProgress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        {/* Product Filter */}
+        <div className="relative min-w-[180px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={productFilter}
+            onChange={(e) => setProductFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Finished Goods</option>
+            {products.filter(p => p.type === "FinishedGood").map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Manufacturing List Table */}

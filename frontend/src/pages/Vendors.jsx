@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { Loader2, Users, Plus, AlertCircle } from 'lucide-react';
+import { Loader2, Users, Plus, AlertCircle, Search } from 'lucide-react';
 import { useErpStore } from '../store/erpStore';
 import { SlideOver } from '../components/common/SlideOver';
 
@@ -13,10 +13,17 @@ export default function Vendors() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [vendorName, setVendorName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data: vendors = [], isLoading } = useQuery({
     queryKey: ['vendors'],
     queryFn: () => api.get('/vendors/')
   });
+
+  const filteredVendors = vendors.filter(v => 
+    v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    v.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const createVendorMutation = useMutation({
     mutationFn: (newVendor) => api.post('/vendors/', newVendor),
@@ -61,6 +68,18 @@ export default function Vendors() {
         )}
       </div>
 
+      {/* Search Bar */}
+      <div className="relative max-w-md bg-card">
+        <Search className="absolute left-3 top-2.5 text-textMuted" size={14} />
+        <input
+          type="text"
+          placeholder="Search vendors by name or ID..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent"
+        />
+      </div>
+
       <div className="w-full border border-border bg-card rounded-custom overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[500px]">
           <thead>
@@ -77,14 +96,14 @@ export default function Vendors() {
                   Loading vendors...
                 </td>
               </tr>
-            ) : vendors.length === 0 ? (
+            ) : filteredVendors.length === 0 ? (
               <tr>
                 <td colSpan="2" className="py-8 text-center text-textMuted font-mono">
                   No vendors found.
                 </td>
               </tr>
             ) : (
-              vendors.map((v) => (
+              filteredVendors.map((v) => (
                 <tr key={v.id} className="hover:bg-elevated/30 transition-colors duration-150">
                   <td className="py-3 px-4 font-mono text-textSecondary">{v.id}</td>
                   <td className="py-3 px-4 font-medium text-textPrimary">{v.name}</td>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
 import { SlideOver } from '../components/common/SlideOver';
-import { Plus, Check, Layers, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Check, Layers, AlertCircle, Loader2, Filter } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 
@@ -16,6 +16,8 @@ export default function Recipes() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [componentFilter, setComponentFilter] = useState("ALL");
+  const [versionFilter, setVersionFilter] = useState("ALL");
   const [errorMessage, setErrorMessage] = useState("");
 
   // Create Form States
@@ -58,11 +60,22 @@ export default function Recipes() {
   });
 
 
-  // Filter recipes based on parent product name
+  // Filter recipes based on search, component, and version
   const filteredBoms = recipes.filter(recipe => {
     const product = products.find(p => p.id === recipe.product_id);
-    return recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           (product && product.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = 
+      recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product && product.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+    const matchesComponent = 
+      componentFilter === "ALL" || 
+      (recipe.lines && recipe.lines.some(line => line.component_product_id === componentFilter));
+      
+    const matchesVersion = 
+      versionFilter === "ALL" || 
+      recipe.version === versionFilter;
+
+    return matchesSearch && matchesComponent && matchesVersion;
   });
 
   const getComponentCount = (recipe) => {
@@ -196,6 +209,40 @@ export default function Recipes() {
             <span>New Recipes</span>
           </button>
         )}
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Component Filter */}
+        <div className="relative min-w-[180px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={componentFilter}
+            onChange={(e) => setComponentFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Component Ingredients</option>
+            {products.filter(p => p.type === "Component").map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Version Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={versionFilter}
+            onChange={(e) => setVersionFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Versions</option>
+            <option value="v1">v1</option>
+            <option value="v2">v2</option>
+            <option value="v3">v3</option>
+            <option value="v4">v4</option>
+          </select>
+        </div>
       </div>
 
       {/* Recipess Data Table */}

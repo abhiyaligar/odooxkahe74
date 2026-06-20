@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
 import { SlideOver } from '../components/common/SlideOver';
-import { Plus, Edit2, Trash2, Tag, Info, ShieldAlert, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Tag, Info, ShieldAlert, AlertCircle, Loader2, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
@@ -15,6 +15,10 @@ export default function Products() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [strategyFilter, setStrategyFilter] = useState("ALL");
+  const [procurementFilter, setProcurementFilter] = useState("ALL");
+  const [stockFilter, setStockFilter] = useState("ALL");
   
   // Forms & CRUD States
   const [isCreating, setIsCreating] = useState(false);
@@ -97,10 +101,19 @@ export default function Products() {
   const canModify = currentRole === "SuperAdmin" || currentRole === "StoreAdmin";
   const canAdjustStock = canModify || currentRole === "InventoryManager";
 
-  // Filter products based on search query
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter products based on search query and other filters
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === "ALL" || p.type === typeFilter;
+    const matchesStrategy = strategyFilter === "ALL" || p.procurement_strategy === strategyFilter;
+    const matchesProcurement = procurementFilter === "ALL" || p.procurement_type === procurementFilter;
+    const matchesStock = 
+      stockFilter === "ALL" ||
+      (stockFilter === "INSTOCK" && p.on_hand_qty > 0) ||
+      (stockFilter === "OUTOFSTOCK" && p.on_hand_qty <= 0);
+
+    return matchesSearch && matchesType && matchesStrategy && matchesProcurement && matchesStock;
+  });
 
   const handleRowClick = (product) => {
     setSelectedProduct(product);
@@ -268,6 +281,65 @@ export default function Products() {
             <span>New Product</span>
           </button>
         )}
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Type Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Types</option>
+            <option value="FinishedGood">Finished Goods</option>
+            <option value="Component">Components</option>
+          </select>
+        </div>
+
+        {/* Strategy Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={strategyFilter}
+            onChange={(e) => setStrategyFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Strategies</option>
+            <option value="MTO">Make to Order (MTO)</option>
+            <option value="MTS">Make to Stock (MTS)</option>
+          </select>
+        </div>
+
+        {/* Procurement Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={procurementFilter}
+            onChange={(e) => setProcurementFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Procurement Types</option>
+            <option value="Manufacture">Manufacture</option>
+            <option value="Purchase">Purchase</option>
+          </select>
+        </div>
+
+        {/* Stock Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Stock Levels</option>
+            <option value="INSTOCK">In Stock Only</option>
+            <option value="OUTOFSTOCK">Out of Stock Only</option>
+          </select>
+        </div>
       </div>
 
       {/* Products Data Table */}

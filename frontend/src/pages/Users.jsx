@@ -13,7 +13,8 @@ import {
   Trash2, 
   Shield, 
   ToggleLeft, 
-  ToggleRight 
+  ToggleRight,
+  Filter 
 } from 'lucide-react';
 
 export default function Users() {
@@ -22,6 +23,8 @@ export default function Users() {
   const isAdmin = currentRole === "SuperAdmin" || currentRole === "StoreAdmin" || currentRole === "UserAdmin";
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null); // When not null, we are editing this user
   
@@ -45,13 +48,11 @@ export default function Users() {
 
   // Fetch users list
   const { data, isLoading, error } = useQuery({
-    queryKey: ['users', page],
-    queryFn: () => api.get(`/auth/users?skip=${(page - 1) * 10}&limit=10`),
+    queryKey: ['users'],
+    queryFn: () => api.get('/auth/users'),
     enabled: isAdmin
   });
 
-  const totalCount = data?.total_count || 0;
-  const totalPages = Math.ceil(totalCount / 10) || 1;
   const users = data?.users || [];
 
   // Create user mutation
@@ -210,12 +211,26 @@ export default function Users() {
     ? allRoles.filter(r => r.value !== "SuperAdmin")
     : allRoles.filter(r => r.value !== "SuperAdmin" && r.value !== "StoreAdmin");
 
-  // Filter users based on search
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter users based on search, role, and active status
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = 
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    const matchesRole = roleFilter === "ALL" || user.role === roleFilter;
+    
+    const matchesStatus = 
+      statusFilter === "ALL" || 
+      (statusFilter === "ACTIVE" && user.is_active) ||
+      (statusFilter === "INACTIVE" && !user.is_active);
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  const totalCount = filteredUsers.length;
+  const totalPages = Math.ceil(totalCount / 10) || 1;
+  const paginatedUsers = filteredUsers.slice((page - 1) * 10, page * 10);
 
   const getRoleBadgeColor = (roleName) => {
     switch (roleName) {
@@ -259,16 +274,48 @@ export default function Users() {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md bg-card">
-        <Search className="absolute left-3 top-2.5 text-textMuted" size={14} />
-        <input
-          type="text"
-          placeholder="Search by name, email, or role..."
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-          className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent"
-        />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search Input */}
+        <div className="relative flex-1 bg-card">
+          <Search className="absolute left-3 top-2.5 text-textMuted" size={14} />
+          <input
+            type="text"
+            placeholder="Search by name, email, or role..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent"
+          />
+        </div>
+
+        {/* Role Filter */}
+        <div className="relative min-w-[160px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={14} />
+          <select
+            value={roleFilter}
+            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Roles</option>
+            {allRoles.map(r => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status Filter */}
+        <div className="relative min-w-[160px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={14} />
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="ACTIVE">Active Only</option>
+            <option value="INACTIVE">Inactive Only</option>
+          </select>
+        </div>
       </div>
 
       {/* Users Directory Table */}
@@ -307,7 +354,7 @@ export default function Users() {
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user) => {
+              paginatedUsers.map((user) => {
                 const modifyAllowed = canModifyUser(user);
                 const isUserAdminRole = user.role === "UserAdmin";
                 const isRegularUser = !["SuperAdmin", "StoreAdmin", "Customer"].includes(user.role);

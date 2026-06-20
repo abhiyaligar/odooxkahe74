@@ -12,7 +12,8 @@ import {
   ShoppingCart, 
   PackageCheck,
   PackageOpen,
-  TrendingUp
+  TrendingUp,
+  Filter
 } from 'lucide-react';
 
 export default function PurchaseOrders() {
@@ -41,6 +42,8 @@ export default function PurchaseOrders() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [vendorFilter, setVendorFilter] = useState("ALL");
   
   // Create Form States
   const [vendorSelect, setVendorSelect] = useState("");
@@ -57,8 +60,13 @@ export default function PurchaseOrders() {
   // Filter Purchase Orders
   const filteredOrders = purchaseOrders.filter(po => {
     const vendor = vendors.find(v => v.id === po.vendor_id);
-    return po.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = po.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
            (vendor && vendor.name.toLowerCase().includes(searchQuery.toLowerCase()));
+           
+    const matchesStatus = statusFilter === "ALL" || po.status === statusFilter;
+    const matchesVendor = vendorFilter === "ALL" || po.vendor_id === vendorFilter;
+    
+    return matchesSearch && matchesStatus && matchesVendor;
   });
 
   const getOrderTotal = (po) => {
@@ -299,6 +307,41 @@ export default function PurchaseOrders() {
             <span>New Purchase Order</span>
           </button>
         )}
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Status Filter */}
+        <div className="relative min-w-[150px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="PartiallyReceived">Partially Received</option>
+            <option value="FullyReceived">Received</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        {/* Vendor Filter */}
+        <div className="relative min-w-[180px] bg-card flex items-center">
+          <Filter className="absolute left-3 text-textMuted" size={12} />
+          <select
+            value={vendorFilter}
+            onChange={(e) => setVendorFilter(e.target.value)}
+            className="w-full bg-background border border-border rounded-custom py-1.5 pl-8 pr-3 text-[11px] text-textPrimary focus:outline-none focus:border-accent appearance-none cursor-pointer"
+          >
+            <option value="ALL">All Vendors</option>
+            {vendors.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Purchase List Table */}
