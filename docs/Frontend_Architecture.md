@@ -64,3 +64,14 @@ When a **Sales Order** is confirmed:
 - Guest routes (`/login`, `/signup`) are guarded to redirect already authenticated users to their home base.
 - Customer routes (`/portal`) are restricted to users with the `Customer` role.
 - Internal ERP routes (`/dashboard`, `/products`, `/sales`, `/purchase`, `/bom`, `/manufacturing`) are restricted to staff roles and wrapped in the ERP sidebar layout.
+
+## 4. Zustand Mock Database Seed Schema
+
+The store `erpStore.js` implements a client-side relational mock database seeded with realistic data for the following entities:
+
+- **Products**: Supports both `FinishedGood` and `Component` types. Features a `procurement_strategy` segmented control (`MTS` for Make-to-Stock / `MTO` for Make-to-Order) and `procurement_type` (Manufacturing vs. Purchase).
+- **Sales Orders**: Tracks order numbers, customer IDs, expectations, actual deliveries, and line items. Statuses map dynamically to customer portal friendly terms.
+- **Purchase Orders**: Tracks vendor assignments, reference linkages back to Sales/Manufacturing orders, and received stock deltas.
+- **Bill of Materials (BoM)**: Connects a finished good to multiple component lines and operations (cutting, assembly, polishing) mapped to specific shop floor Work Centers.
+- **Manufacturing Orders (MO)**: Tracks work orders sequence execution, component reservations (available, shortage, reserved), and progress.
+- **Stock Ledger**: Chronological transaction logger recording every stock alteration, referencing order types, users, and resulting balances.
