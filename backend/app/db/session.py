@@ -1,7 +1,13 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from app.core.config import settings
 
-engine = create_async_engine(settings.DB_URL, echo=True)
+ASYNC_DB_URL = settings.DB_URL
+if ASYNC_DB_URL.startswith("postgresql://"):
+    ASYNC_DB_URL = ASYNC_DB_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif ASYNC_DB_URL.startswith("postgres://"):
+    ASYNC_DB_URL = ASYNC_DB_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+
+engine = create_async_engine(ASYNC_DB_URL, echo=True)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
