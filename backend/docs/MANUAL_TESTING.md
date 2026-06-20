@@ -176,3 +176,80 @@ Create a recipe for the "Wooden Cabinet" requiring 1 Wood Panel and 8 Metal Scre
   }
   ```
   The API blocks the execution, preventing negative counts.
+
+---
+
+## 5. Manufacturing & Work Orders
+
+This module lets you manage production runs.
+
+### A. Create a Manufacturing Order (Draft)
+Create an order to produce 10 Wooden Cabinets using the BoM created in Step 3.
+* **Endpoint**: `POST /api/v1/manufacturing-orders/`
+* **cURL**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8000/api/v1/manufacturing-orders/" \
+       -H "Authorization: Bearer <TOKEN>" \
+       -H "Content-Type: application/json" \
+       -d "{\"product_id\": \"<FINISHED_GOOD_ID>\", \"bom_id\": \"<BOM_ID>\", \"quantity_to_produce\": 10.0}"
+  ```
+* Save the returned MO ID: `<MO_ID>`. The response automatically contains the default routing work orders parsed from the BoM operations.
+
+### B. Custom Routing Overrides (Optional)
+While the MO is in `Draft` state, you can manually customize the steps:
+* **Add custom operation step**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8000/api/v1/manufacturing-orders/<MO_ID>/work-orders/" \
+       -H "Authorization: Bearer <TOKEN>" \
+       -H "Content-Type: application/json" \
+       -d "{\"operation_name\": \"Final Quality Check\", \"sequence\": 3, \"work_center_id\": \"<WORK_CENTER_UUID>\"}"
+  ```
+
+### C. Confirm the MO (Atomic SQL Stock Reservation)
+Trigger confirmation to verify raw material stock and lock the quantities:
+* **Endpoint**: `POST /api/v1/manufacturing-orders/{mo_id}/confirm`
+* **cURL**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8000/api/v1/manufacturing-orders/<MO_ID>/confirm" \
+       -H "Authorization: Bearer <TOKEN>"
+  ```
+* **Behind the Scenes**: The backend runs atomic SQL update criteria on each raw material (Wood Panel and Metal Screws). If stock is available, it increments `reserved_qty`. If not, it rolls back cleanly.
+
+### D. Start Production
+Start the confirmed manufacturing run:
+* **Endpoint**: `POST /api/v1/manufacturing-orders/{mo_id}/start`
+* **cURL**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8000/api/v1/manufacturing-orders/<MO_ID>/start" \
+       -H "Authorization: Bearer <TOKEN>"
+  ```
+
+### E. Process Work Center Steps (Sequence Enforcement)
+Operations must be processed sequentially.
+1. Try starting the second operation (e.g. sequence 2, `<WO2_ID>`) before sequence 1 is done:
+   ```bash
+   curl -X POST "http://127.0.0.1:8000/api/v1/manufacturing-orders/<MO_ID>/work-orders/<WO2_ID>/start" \
+        -H "Authorization: Bearer <TOKEN>"
+   ```
+   *Expected Response (400 Bad Request)*: Tells you previous sequence step must be completed first.
+2. Process Step 1 correctly:
+   - Start: `POST /.../work-orders/<WO1_ID>/start`
+   - Complete: `POST /.../work-orders/<WO1_ID>/complete`
+3. Process Step 2 correctly:
+   - Start: `POST /.../work-orders/<WO2_ID>/start`
+   - Complete: `POST /.../work-orders/<WO2_ID>/complete`
+
+### F. Complete the MO (Consume & Produce)
+Once all steps are completed, execute inventory drain and finished production:
+* **Endpoint**: `POST /api/v1/manufacturing-orders/{mo_id}/complete`
+* **cURL**:
+  ```bash
+  curl -X POST "http://127.0.0.1:8000/api/v1/manufacturing-orders/<MO_ID>/complete" \
+       -H "Authorization: Bearer <TOKEN>"
+  ```
+* **Behind the Scenes**:
+  - Decrements Wood Panels on_hand/reserved by 10.0, and Metal Screws by 80.0.
+  - Logs `StockLedgerEntry` for component consumptions.
+  - Increments Wooden Cabinet on_hand by 10.0 and logs `StockLedgerEntry` for finished production.
+  - Stamps state as `Completed`.
+

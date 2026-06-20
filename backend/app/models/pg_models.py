@@ -209,9 +209,11 @@ class PurchaseOrderLine(Base):
 
 class ManufacturingOrderStatus(str, enum.Enum):
     Draft = "Draft"
+    Confirmed = "Confirmed"
     InProgress = "InProgress"
     Completed = "Completed"
     Cancelled = "Cancelled"
+
 
 class ManufacturingOrderSource(str, enum.Enum):
     Manual = "Manual"
@@ -231,6 +233,11 @@ class ManufacturingOrder(Base):
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 
+    work_orders = relationship("WorkOrder", back_populates="manufacturing_order", cascade="all, delete-orphan")
+    product = relationship("Product", foreign_keys=[product_id])
+    bom = relationship("BoM")
+
+
 class WorkOrderStatus(str, enum.Enum):
     Pending = "Pending"
     InProgress = "InProgress"
@@ -246,6 +253,10 @@ class WorkOrder(Base):
     status = Column(Enum(WorkOrderStatus), default=WorkOrderStatus.Pending, nullable=False)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+
+    manufacturing_order = relationship("ManufacturingOrder", back_populates="work_orders")
+    work_center = relationship("WorkCenter")
+
 
 class LedgerReason(str, enum.Enum):
     SaleDelivery = "SaleDelivery"
