@@ -70,3 +70,35 @@ Whenever you update a SQLAlchemy model in `app/models/pg_models.py`:
    alembic upgrade head
    ```
 *(If using Docker Compose, you may need to execute these commands inside the `backend` container).*
+
+---
+
+## 5. Running Tests
+
+The backend includes a comprehensive suite of unit and integration tests using Pytest. The tests run against an in-memory SQLite database (`aiosqlite`), isolating test runs from development and production environments.
+
+### Running Backend Tests
+1. Navigate to the `/backend` directory.
+2. Ensure you have activated your virtual environment.
+3. Run the following command:
+
+#### Windows (PowerShell)
+```powershell
+.\venv\Scripts\pytest
+```
+
+#### Windows (Command Prompt)
+```cmd
+venv\Scripts\pytest
+```
+
+#### macOS / Linux
+```bash
+./venv/bin/pytest
+```
+
+### Pytest Configuration
+The pytest environment is configured via `pytest.ini` in the `backend` root. It sets:
+- **`asyncio_mode = auto`**: Automatically runs async test functions using the `pytest-asyncio` plugin.
+- **`testpaths = tests`**: Looks for tests inside the `tests` directory.
+
