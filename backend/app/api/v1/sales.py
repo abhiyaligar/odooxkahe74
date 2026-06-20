@@ -50,7 +50,7 @@ async def create_sales_order(
             sales_order_id=db_order.id,
             product_id=line.product_id,
             quantity_ordered=line.quantity_ordered,
-            unit_price=product.sales_price
+            unit_price=line.unit_price if line.unit_price is not None else product.sales_price
         )
         db.add(db_line)
         
