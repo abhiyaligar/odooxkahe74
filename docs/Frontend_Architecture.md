@@ -1,42 +1,61 @@
-# Frontend Architecture: Mini ERP
+# Frontend Architecture: Shiv Furniture Works Mini ERP
+
+This document outlines the frontend architecture of the **Shiv Furniture Works** Mini ERP and Customer Portal system built for the Odoo-style hackathon.
 
 ## 1. Technology Stack
-- **Library**: React (v18+)
-- **Styling**: Tailwind CSS for utility-first styling.
-- **UI Components**: `shadcn/ui` (built on Radix UI) for accessible, pre-designed, and highly customizable ERP components (Data Tables, Modals, Dropdowns).
-- **Routing**: React Router (v6) for client-side routing.
-- **Form Handling & Validation**: React Hook Form paired with Zod (for type-safe schema validation).
-- **Server State & Data Fetching**: React Query (`@tanstack/react-query`) for API caching, background fetching, pagination, and optimistic updates.
-- **Global Client State**: Zustand (for lightweight global state like Auth tokens and User Roles).
-- **API Client**: Axios (configured with interceptors for JWT auth and error handling).
-- **Build Tool**: Vite (for fast HMR and optimized builds).
+- **Core Library**: React (v18)
+- **Styling**: Tailwind CSS (class-based dark mode config)
+- **Iconography**: Lucide React
+- **Charts**: Recharts (fully reactive to light/dark themes)
+- **Routing & State Routing**: React Router (v6) + custom view routers
+- **State Management**: Zustand (housing the central mock database and reactive inventory/procurement auto-replenishment logic)
+- **Build Tool**: Vite
 
 ## 2. Directory Structure
 
 ```text
-src/
-├── assets/          # Static assets (images, icons)
-├── components/      # Reusable UI components
-│   ├── ui/          # shadcn/ui base components (Button, Input, Dialog, etc.)
-│   ├── common/      # Shared custom components (e.g., AppSidebar, Layout)
-│   └── forms/       # Form wrappers utilizing React Hook Form + Zod
-├── hooks/           # Custom React hooks (e.g., useAuth, usePermissions)
-├── lib/             # Utility libraries (e.g., axios instance, cn/clsx utility)
-├── pages/           # Page components (routed views)
-│   ├── Dashboard/
-│   ├── Inventory/
-│   ├── Sales/
-│   ├── Purchase/
-│   └── Manufacturing/
-├── services/        # React Query hooks (e.g., useGetProducts, useCreateOrder)
-├── store/           # Zustand global state stores (e.g., authStore)
-├── types/           # TypeScript/Zod definitions (if using TS)
-├── App.jsx          # Root component
-└── main.jsx         # Application entry point
+frontend/
+├── index.html           # Injected theme checker to prevent initial style flash
+├── tailwind.config.js   # Custom dark/light colors and variables mapping
+└── src/
+    ├── main.jsx         # App entry point
+    ├── App.jsx          # Route switcher and role guards mapping Page components
+    ├── App.css          # Main stylesheet adjustments
+    ├── index.css        # Core tailwind layers and CSS custom variables (Light/Dark mode)
+    ├── assets/          # Static vector images (e.g. hero.png)
+    ├── components/
+    │   └── common/
+    │       ├── Layout.jsx        # ERP internal sidebar/topbar shell
+    │       ├── Skeleton.jsx      # Theme-aware loading placeholders
+    │       ├── SlideOver.jsx     # Side sliding panels for detail drawers
+    │       ├── ThemeProvider.jsx # Theme context provider (light/dark/system)
+    │       └── ThemeToggle.jsx   # Header theme switcher buttons
+    ├── pages/
+    │   ├── Landing.jsx           # Public portal landing page
+    │   ├── Login.jsx             # Role-agnostic authentication page with quick demo logins
+    │   ├── Signup.jsx            # Dual-role segmented account registration
+    │   ├── Dashboard.jsx         # Internal ERP analytical dashboard and Recharts
+    │   ├── Products.jsx          # Material/Product manager with visual stock bar
+    │   ├── SalesOrders.jsx       # Order planner with automatic replenishment checks
+    │   ├── PurchaseOrders.jsx    # Vendor procurement with receipt stock deltas
+    │   ├── BoM.jsx               # Bill of Materials manager and operations lists
+    │   ├── Manufacturing.jsx     # Shop floor tracker and Work Order execution
+    │   └── CustomerPortal.jsx    # Client portal: Catalog, Cart, Order History, Tracking
+    └── store/
+        └── erpStore.js           # Zustand store with mock data seed and automation rules
 ```
 
-## 3. Core Principles
-1. **Component-Based UI**: Utilize `shadcn/ui` to quickly assemble complex, premium-feeling ERP interfaces without writing boilerplate CSS.
-2. **Robust Forms**: ERPs are form-heavy. Every form must use React Hook Form for performance (prevents re-renders) and Zod for strict frontend validation.
-3. **Server State Mastery**: Use React Query for all server interactions to ensure the UI is snappy, data is cached locally, and loading/error states are handled gracefully.
-4. **Role-Based Access Control (RBAC)**: Use Zustand to store the user's role and implement a `usePermissions` hook to guard routes and hide/disable sensitive UI actions.
+## 3. Core Business Logic & UI Features
+
+### A. State Management & Auto-Procurement
+All mock tables (Products, Sales Orders, Purchase Orders, BoMs, Manufacturing Orders, Work Orders, Stock Ledger) are stored in `erpStore.js`.
+When a **Sales Order** is confirmed:
+- If a shortfall occurs (Available stock < Ordered stock), the store automatically triggers:
+  - A **Purchase Order** if the product is purchased from a vendor.
+  - A **Manufacturing Order** (with associated **Work Orders**) if the product is manufactured in-house.
+  - This flow executes recursively through component dependencies of the product's **Bill of Materials (BoM)**.
+
+### B. Dark & Light Mode Theme Support
+- Theme selection is stored in `localStorage` and falls back to system preferences.
+- Defined variables in `index.css` map to Tailwind custom theme configurations so that colors adapt automatically.
+- Recharts graphics in the `Dashboard` dynamically query `document.documentElement` styles to paint theme-correct lines and grid axes.

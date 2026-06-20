@@ -50,6 +50,35 @@ export default function CustomerPortal() {
   // We act as logged-in customer "c3" (Vikas Homes)
   const customerId = "c3";
 
+  // SVG representation for products to replace placeholders
+  const renderProductSvg = (name, className = "w-16 h-16 text-textSecondary") => {
+    if (name.toLowerCase().includes("chair")) {
+      return (
+        <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M24 16h16v16H24z" fill="currentColor" fillOpacity="0.05" />
+          <path d="M20 32h24v4H20z" fill="currentColor" fillOpacity="0.1" />
+          <line x1="32" y1="36" x2="32" y2="46" />
+          <line x1="20" y1="50" x2="44" y2="50" />
+          <line x1="32" y1="46" x2="20" y2="50" />
+          <line x1="32" y1="46" x2="44" y2="50" />
+          <circle cx="20" cy="50" r="1.5" fill="currentColor" />
+          <circle cx="44" cy="50" r="1.5" fill="currentColor" />
+          <circle cx="32" cy="50" r="1.5" fill="currentColor" />
+        </svg>
+      );
+    }
+    // Default to table
+    return (
+      <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 26 32 16 52 26 32 36" fill="currentColor" fillOpacity="0.05" />
+        <line x1="16" y1="28" x2="16" y2="48" />
+        <line x1="32" y1="36" x2="32" y2="52" />
+        <line x1="48" y1="28" x2="48" y2="48" />
+        <polyline points="16 28 32 36 48 28" />
+      </svg>
+    );
+  };
+
   // Filter products to show only finished goods
   const finishedGoods = products.filter(p => p.type === "FinishedGood");
   
@@ -309,15 +338,15 @@ export default function CustomerPortal() {
                     key={p.id}
                     className="bg-card border border-border rounded-[8px] p-5 flex flex-col space-y-4 hover:border-textSecondary transition-all duration-150"
                   >
-                    {/* Placeholder image box */}
+                    {/* Product Vector Image */}
                     <div 
                       onClick={() => {
                         setSelectedProduct(p);
                         setCurrentTab("detail");
                       }}
-                      className="aspect-video w-full bg-elevated border border-border rounded-custom flex items-center justify-center text-textMuted text-xs font-semibold cursor-pointer hover:bg-elevated/80 transition-colors"
+                      className="aspect-video w-full bg-elevated border border-border rounded-custom flex items-center justify-center cursor-pointer hover:bg-elevated/80 transition-colors"
                     >
-                      {p.name} Image Placeholder
+                      {renderProductSvg(p.name, "w-12 h-12 text-textSecondary")}
                     </div>
 
                     <div className="space-y-1 flex-1">
@@ -372,8 +401,8 @@ export default function CustomerPortal() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               {/* Image Box */}
-              <div className="aspect-square w-full bg-card border border-border rounded-[8px] flex items-center justify-center text-textMuted text-xs font-semibold">
-                Large {selectedProduct.name} Preview Placeholder
+              <div className="aspect-square w-full bg-card border border-border rounded-[8px] flex items-center justify-center">
+                {renderProductSvg(selectedProduct.name, "w-32 h-32 text-textPrimary")}
               </div>
 
               {/* Product Info details */}
