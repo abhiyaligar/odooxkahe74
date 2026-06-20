@@ -120,8 +120,8 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
 
         {/* General Alert Box */}
         {errors.general && (
-          <div className="bg-statusRed/10 border border-statusRed/20 text-statusRed p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed">
-            <AlertCircle className="h-4 w-4 shrink-0 text-statusRed mt-0.5" />
+          <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed">
+            <AlertCircle className="h-4 w-4 shrink-0 text-danger mt-0.5" />
             <span>{errors.general}</span>
           </div>
         )}
@@ -140,11 +140,11 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={`w-full bg-card border text-xs py-2 ${
-                errors.email ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
+                errors.email ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
               }`}
             />
             {errors.email && (
-              <span className="text-[10px] text-statusRed font-mono">{errors.email}</span>
+              <span className="text-[10px] text-danger font-mono">{errors.email}</span>
             )}
           </div>
 
@@ -159,7 +159,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`w-full bg-card border text-xs py-2 pr-10 ${
-                  errors.password ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
+                  errors.password ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
                 }`}
               />
               <button
@@ -173,7 +173,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
               </button>
             </div>
             {errors.password && (
-              <span className="text-[10px] text-statusRed font-mono">{errors.password}</span>
+              <span className="text-[10px] text-danger font-mono">{errors.password}</span>
             )}
           </div>
 
