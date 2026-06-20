@@ -1,16 +1,6 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Environments
-.env
-.venv
-env/
 venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Pytest
+__pycache__/
+*.pyc
+.env
 .pytest_cache/
+alembic.ini
