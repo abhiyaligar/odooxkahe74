@@ -232,7 +232,7 @@ export default function Manufacturing() {
   const renderStepper = (status) => {
     if (status === "Cancelled") {
       return (
-        <div className="flex items-center justify-center p-3 bg-statusRed/10 border border-statusRed/20 text-statusRed rounded-custom text-xs font-semibold uppercase tracking-wider font-mono">
+        <div className="flex items-center justify-center p-3 bg-danger/10 border border-danger/20 text-danger rounded-custom text-xs font-semibold uppercase tracking-wider font-mono">
           Cancelled: Manufacturing Aborted
         </div>
       );
@@ -359,9 +359,9 @@ export default function Manufacturing() {
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
                         mo.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
-                        mo.status === "InProgress" ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' :
-                        mo.status === "Completed" ? 'border-statusGreen/40 text-statusGreen bg-statusGreen/5' :
-                        'border-statusRed/40 text-statusRed bg-statusRed/5'
+                        mo.status === "InProgress" ? 'border-warning/40 text-warning bg-warning/5' :
+                        mo.status === "Completed" ? 'border-success/40 text-success bg-success/5' :
+                        'border-danger/40 text-danger bg-danger/5'
                       }`}>
                         {mo.status === "InProgress" ? "In Progress" : mo.status}
                       </span>
@@ -388,7 +388,7 @@ export default function Manufacturing() {
           /* CREATE MANUFACTURING ORDER */
           <form onSubmit={handleSave} className="space-y-6">
             {errorMessage && (
-              <div className="bg-statusRed/10 border border-statusRed/20 text-statusRed p-3 rounded-custom flex items-center space-x-2 text-xs">
+              <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-center space-x-2 text-xs">
                 <AlertCircle size={16} className="shrink-0" />
                 <span className="font-mono">{errorMessage}</span>
               </div>
@@ -442,15 +442,15 @@ export default function Manufacturing() {
                         <div className="flex items-center space-x-1.5">
                           {shortage > 0 ? (
                             <>
-                              <span className="text-statusAmber">-{shortage} Shortage</span>
+                              <span className="text-warning">-{shortage} Shortage</span>
                               {comp.procure_on_demand ? (
                                 <span className="text-[9px] bg-elevated border border-border text-textSecondary px-1 rounded uppercase">Auto-{comp.procurement_type}</span>
                               ) : (
-                                <span className="text-[9px] border border-statusRed/20 text-statusRed px-1 rounded uppercase">Manual</span>
+                                <span className="text-[9px] border border-danger/20 text-danger px-1 rounded uppercase">Manual</span>
                               )}
                             </>
                           ) : (
-                            <span className="text-statusGreen">Allocated (Free: {freeToUse})</span>
+                            <span className="text-success">Allocated (Free: {freeToUse})</span>
                           )}
                         </div>
                       </div>
@@ -486,7 +486,7 @@ export default function Manufacturing() {
 
               {/* Error messages inside details */}
               {errorMessage && (
-                <div className="bg-statusRed/10 border border-statusRed/20 text-statusRed p-3 rounded-custom flex items-center space-x-2 text-xs">
+                <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-center space-x-2 text-xs">
                   <AlertCircle size={16} className="shrink-0" />
                   <span className="font-mono">{errorMessage}</span>
                 </div>
@@ -552,7 +552,7 @@ export default function Manufacturing() {
                               <td className="py-2 px-3 text-right text-textSecondary">{qtyReserved}</td>
                               <td className="py-2 px-3 text-center">
                                 <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded font-mono ${
-                                  isShortage ? 'bg-statusRed/10 border border-statusRed/20 text-statusRed' : 'bg-statusGreen/10 border border-statusGreen/20 text-statusGreen'
+                                  isShortage ? 'bg-danger/10 border border-danger/20 text-danger' : 'bg-success/10 border border-success/20 text-success'
                                 }`}>
                                   {isShortage ? "Shortage" : "Allocated"}
                                 </span>
@@ -603,8 +603,8 @@ export default function Manufacturing() {
                                 <td className="py-3 px-3 text-center">
                                   <span className={`inline-block text-[9px] font-bold uppercase rounded-full px-2 py-0.5 border ${
                                     wo.status === "Pending" ? 'border-border text-textSecondary' :
-                                    wo.status === "InProgress" ? 'border-statusAmber/40 text-statusAmber animate-pulse' :
-                                    'border-statusGreen/40 text-statusGreen'
+                                    wo.status === "InProgress" ? 'border-warning/40 text-warning animate-pulse' :
+                                    'border-success/40 text-success'
                                   }`}>
                                     {wo.status === "InProgress" ? "In Progress" : wo.status}
                                   </span>
@@ -631,7 +631,7 @@ export default function Manufacturing() {
                                         </button>
                                       )}
                                       {wo.status === "Done" && (
-                                        <Check size={14} className="text-statusGreen inline-block mr-2" strokeWidth={3} />
+                                        <Check size={14} className="text-success inline-block mr-2" strokeWidth={3} />
                                       )}
                                     </>
                                   )}
@@ -651,7 +651,7 @@ export default function Manufacturing() {
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="hover:text-statusRed text-xs text-textMuted py-2 transition-colors duration-150"
+                    className="hover:text-danger text-xs text-textMuted py-2 transition-colors duration-150"
                   >
                     Abort MO
                   </button>

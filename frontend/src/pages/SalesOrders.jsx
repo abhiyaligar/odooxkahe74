@@ -166,7 +166,7 @@ export default function SalesOrders() {
 
   const handleLinePriceChange = (idx, price) => {
     const updated = [...orderLines];
-    updated[idx] = { ...updated[idx], unit_price: Math.max(0, Number(price)) };
+    updated[idx] = { ...updated[idx], unit_price: Math.max(0, Math.round(Number(price)) || 0) };
     setOrderLines(updated);
   };
 
@@ -239,7 +239,7 @@ export default function SalesOrders() {
   const renderStepper = (status) => {
     if (status === "Cancelled") {
       return (
-        <div className="flex items-center justify-center p-3 bg-statusRed/10 border border-statusRed/20 text-statusRed rounded-custom text-xs font-semibold uppercase tracking-wider font-mono">
+        <div className="flex items-center justify-center p-3 bg-danger/10 border border-danger/20 text-danger rounded-custom text-xs font-semibold uppercase tracking-wider font-mono">
           Cancelled: Order Voided
         </div>
       );
@@ -362,10 +362,10 @@ export default function SalesOrders() {
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
                         so.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
-                        so.status === "Confirmed" ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' :
-                        so.status === "PartiallyDelivered" ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' :
-                        so.status === "FullyDelivered" ? 'border-statusGreen/40 text-statusGreen bg-statusGreen/5' :
-                        'border-statusRed/40 text-statusRed bg-statusRed/5'
+                        so.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
+                        so.status === "PartiallyDelivered" ? 'border-warning/40 text-warning bg-warning/5' :
+                        so.status === "FullyDelivered" ? 'border-success/40 text-success bg-success/5' :
+                        'border-danger/40 text-danger bg-danger/5'
                       }`}>
                         {so.status === "PartiallyDelivered" ? "Part Shipped" : 
                          so.status === "FullyDelivered" ? "Shipped" : so.status}
@@ -472,7 +472,7 @@ export default function SalesOrders() {
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         placeholder="Price"
                         value={line.unit_price}
                         onChange={(e) => handleLinePriceChange(idx, e.target.value)}
@@ -487,7 +487,7 @@ export default function SalesOrders() {
                       type="button"
                       onClick={() => handleRemoveLine(idx)}
                       disabled={orderLines.length === 1 || createSalesOrderMutation.isPending}
-                      className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
+                      className="text-textMuted hover:text-danger disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
                     </button>
@@ -508,13 +508,13 @@ export default function SalesOrders() {
                       <div className="flex items-center space-x-1.5">
                         {detail.shortage > 0 ? (
                           <>
-                            <span className="text-statusRed flex items-center"><TrendingDown size={11} className="mr-0.5" /> -{detail.shortage} Short</span>
+                            <span className="text-danger flex items-center"><TrendingDown size={11} className="mr-0.5" /> -{detail.shortage} Short</span>
                             <span className="text-[10px] text-textMuted bg-elevated px-1.5 py-0.5 rounded">
                               {detail.procureActive ? `Auto-${detail.route}` : 'Needs Manual Resolving'}
                             </span>
                           </>
                         ) : (
-                          <span className="text-statusGreen flex items-center"><Check size={11} className="mr-0.5" /> Stock OK (Free: {detail.freeToUse})</span>
+                          <span className="text-success flex items-center"><Check size={11} className="mr-0.5" /> Stock OK (Free: {detail.freeToUse})</span>
                         )}
                       </div>
                     </div>
@@ -622,8 +622,8 @@ export default function SalesOrders() {
                         </div>
 
                         {detail.shortage > 0 ? (
-                          <div className="flex items-center space-x-1.5 text-[11px] text-statusAmber pl-2 border-l border-statusAmber/40 py-0.5">
-                            <AlertTriangle size={12} className="text-statusAmber flex-shrink-0" />
+                          <div className="flex items-center space-x-1.5 text-[11px] text-warning pl-2 border-l border-warning/40 py-0.5">
+                            <AlertTriangle size={12} className="text-warning flex-shrink-0" />
                             <span>
                               {detail.procureActive 
                                 ? `Shortage of ${detail.shortage} units will auto-trigger a ${detail.route} Order (Draft).`
@@ -632,8 +632,8 @@ export default function SalesOrders() {
                             </span>
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-1.5 text-[11px] text-statusGreen pl-2 border-l border-statusGreen/40 py-0.5">
-                            <Check size={12} className="text-statusGreen flex-shrink-0" />
+                          <div className="flex items-center space-x-1.5 text-[11px] text-success pl-2 border-l border-success/40 py-0.5">
+                            <Check size={12} className="text-success flex-shrink-0" />
                             <span>Stock allocated successfully. Sufficient inventory free-to-use.</span>
                           </div>
                         )}
@@ -669,7 +669,7 @@ export default function SalesOrders() {
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="hover:text-statusRed text-xs text-textMuted py-2 transition-colors duration-150"
+                    className="hover:text-danger text-xs text-textMuted py-2 transition-colors duration-150"
                   >
                     Void Order
                   </button>

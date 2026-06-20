@@ -191,7 +191,7 @@ export default function Products() {
           version: "1.0",
           lines: recipeLines.map(l => ({
             component_product_id: l.component_product_id,
-            quantity_required: Number(l.quantity_required)
+            quantity_required: Math.max(1, Math.round(Number(l.quantity_required)) || 1)
           }))
         };
         const newRecipe = await api.post('/recipes/', recipePayload);
@@ -317,7 +317,7 @@ export default function Products() {
                     <td className="py-3 px-4 text-right font-mono text-textSecondary">${p.cost_price.toFixed(2)}</td>
                     <td className="py-3 px-4 text-right font-mono font-medium">{p.on_hand_qty}</td>
                     <td className="py-3 px-4 text-right font-mono text-textSecondary">{p.reserved_qty}</td>
-                    <td className={`py-3 px-4 text-right font-mono font-semibold ${isShortage ? 'text-statusRed' : 'text-textPrimary'}`}>
+                    <td className={`py-3 px-4 text-right font-mono font-semibold ${isShortage ? 'text-danger' : 'text-textPrimary'}`}>
                       {freeToUse}
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -328,9 +328,9 @@ export default function Products() {
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center space-x-1.5">
                         <span className={`h-1.5 w-1.5 rounded-full ${
-                          isShortage ? 'bg-statusRed' : 
-                          freeToUse === 0 ? 'bg-statusAmber' : 
-                          'bg-statusGreen'
+                          isShortage ? 'bg-danger' : 
+                          freeToUse === 0 ? 'bg-warning' : 
+                          'bg-success'
                         }`} />
                         <span className="text-[10px] text-textSecondary font-medium">
                           {isShortage ? `Short (${Math.abs(freeToUse)})` : 
@@ -469,11 +469,11 @@ export default function Products() {
                   <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Sales Price ($)</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.sales_price}
-                    onChange={(e) => setFormData({ ...formData, sales_price: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, sales_price: Math.max(0, Math.round(Number(e.target.value)) || 0) })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed font-mono"
                   />
                 </div>
@@ -482,11 +482,11 @@ export default function Products() {
                   <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Cost Price ($)</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.cost_price}
-                    onChange={(e) => setFormData({ ...formData, cost_price: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, cost_price: Math.max(0, Math.round(Number(e.target.value)) || 0) })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed font-mono"
                   />
                 </div>
@@ -505,7 +505,7 @@ export default function Products() {
                 </div>
                 <div className="bg-card border border-border p-3 rounded-custom text-center">
                   <div className="text-[10px] text-textSecondary font-semibold uppercase">Reserved</div>
-                  <div className="text-xl font-bold font-mono mt-1 text-statusAmber">{selectedProduct.reserved_qty}</div>
+                  <div className="text-xl font-bold font-mono mt-1 text-warning">{selectedProduct.reserved_qty}</div>
                 </div>
                 <div className="bg-card border border-border p-3 rounded-custom text-center">
                   <div className="text-[10px] text-textSecondary font-semibold uppercase">Free To Use</div>
@@ -551,7 +551,7 @@ export default function Products() {
               {canAdjustStock && (
                 <div className="border border-border rounded-custom p-4 bg-card/20 space-y-3">
                   <div className="flex items-center space-x-2 text-textSecondary">
-                    <AlertCircle size={14} className="text-statusAmber" />
+                    <AlertCircle size={14} className="text-warning" />
                     <span className="text-[11px] font-bold uppercase tracking-wider">Manual Adjustment Ledger Action</span>
                   </div>
                   
@@ -721,8 +721,8 @@ export default function Products() {
                                 </select>
                                 <input
                                   type="number"
-                                  min="0.01"
-                                  step="0.01"
+                                  min="1"
+                                  step="1"
                                   value={line.quantity_required}
                                   onChange={(e) => {
                                     const newLines = [...recipeLines];
@@ -739,7 +739,7 @@ export default function Products() {
                                     const newLines = recipeLines.filter((_, i) => i !== idx);
                                     setRecipeLines(newLines.length ? newLines : [{ component_product_id: "", quantity_required: 1 }]);
                                   }}
-                                  className="p-1.5 text-statusRed hover:bg-statusRed/10 rounded transition-colors"
+                                  className="p-1.5 text-danger hover:bg-danger/10 rounded transition-colors"
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -769,7 +769,7 @@ export default function Products() {
                 type="button"
                 onClick={handleDelete}
                 disabled={deleteProductMutation.isPending}
-                className="flex items-center space-x-1 hover:text-statusRed transition-colors duration-150 text-xs text-textMuted py-2 disabled:opacity-50"
+                className="flex items-center space-x-1 hover:text-danger transition-colors duration-150 text-xs text-textMuted py-2 disabled:opacity-50"
               >
                 {deleteProductMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                 <span>Delete Catalog Listing</span>

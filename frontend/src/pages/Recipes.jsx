@@ -116,7 +116,7 @@ export default function Recipes() {
     const updated = [...formComponents];
     updated[idx] = {
       ...updated[idx],
-      [field]: field === "quantity_required" ? Math.max(0.1, Number(val)) : val
+      [field]: field === "quantity_required" ? Math.max(1, Math.round(Number(val)) || 1) : val
     };
     setFormComponents(updated);
   };
@@ -264,7 +264,7 @@ export default function Recipes() {
             
             {/* Error Message banner */}
             {errorMessage && (
-              <div className="bg-statusRed/10 border border-statusRed/20 text-statusRed p-3 rounded-custom flex items-center space-x-2 text-xs">
+              <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-center space-x-2 text-xs">
                 <AlertCircle size={16} className="shrink-0" />
                 <span className="font-mono">{errorMessage}</span>
               </div>
@@ -348,8 +348,8 @@ export default function Recipes() {
                     <div className="w-32">
                       <input
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        step="1"
+                        min="1"
                         placeholder="Qty required"
                         value={line.quantity_required}
                         onChange={(e) => handleComponentChange(idx, "quantity_required", e.target.value)}
@@ -364,7 +364,7 @@ export default function Recipes() {
                       type="button"
                       onClick={() => handleRemoveComponentRow(idx)}
                       disabled={formComponents.length === 1 || createBomMutation.isPending}
-                      className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
+                      className="text-textMuted hover:text-danger disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
                     </button>
@@ -437,7 +437,7 @@ export default function Recipes() {
                       type="button"
                       onClick={() => handleRemoveOperationRow(idx)}
                       disabled={formOperations.length === 1 || createBomMutation.isPending}
-                      className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
+                      className="text-textMuted hover:text-danger disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
                     </button>
