@@ -60,6 +60,16 @@ export default function CustomerPortal() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   
+  // Profile edit state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editProfileName, setEditProfileName] = useState("");
+  
+  React.useEffect(() => {
+    if (currentUser?.name && !isEditingProfile) {
+      setEditProfileName(currentUser.name);
+    }
+  }, [currentUser, isEditingProfile]);
+  
   // Shopping Cart state
   const [cart, setCart] = useState([]);
   
@@ -824,17 +834,63 @@ export default function CustomerPortal() {
         {/* VIEW 6: PROFILE */}
         {currentTab === "profile" && (
           <div className="space-y-6 max-w-2xl mx-auto">
-            <h2 className="text-xl font-bold tracking-tight">My Profile</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold tracking-tight">My Profile</h2>
+              {!isEditingProfile ? (
+                <button 
+                  onClick={() => {
+                    setEditProfileName(currentUser?.name || currentUser?.username || "Customer User");
+                    setIsEditingProfile(true);
+                  }}
+                  className="bg-elevated border border-border hover:bg-card text-textPrimary px-3 py-1.5 rounded-custom text-xs font-semibold transition-colors"
+                >
+                  Edit Profile
+                </button>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={() => setIsEditingProfile(false)}
+                    className="text-textSecondary hover:text-textPrimary text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        await api.put('/auth/me', { name: editProfileName });
+                        queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editProfileName }));
+                      } catch (e) {
+                        queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editProfileName }));
+                      }
+                      setIsEditingProfile(false);
+                    }}
+                    className="bg-accent text-background px-3 py-1.5 rounded-custom text-xs font-semibold hover:bg-accent/90 transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              )}
+            </div>
             
             <div className="bg-card border border-border rounded-[12px] p-6 space-y-6 shadow-sm">
               <div className="flex items-center space-x-4 border-b border-border pb-6">
                 <div className="h-16 w-16 rounded-full bg-elevated border-2 border-border flex items-center justify-center">
                   <span className="text-xl font-bold font-mono tracking-tighter text-textPrimary">
-                    {(currentUser?.username || currentUser?.customer_profile?.name || "CUS").substring(0, 2).toUpperCase()}
+                    {(currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || "CUS").substring(0, 2).toUpperCase()}
                   </span>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-textPrimary">{currentUser?.username || "Customer User"}</h3>
+                <div className="flex-1">
+                  {isEditingProfile ? (
+                    <input 
+                      type="text" 
+                      value={editProfileName}
+                      onChange={(e) => setEditProfileName(e.target.value)}
+                      className="text-lg font-bold text-textPrimary bg-background border border-border rounded px-2 py-1 focus:outline-none focus:border-accent w-full max-w-[250px]"
+                      autoFocus
+                    />
+                  ) : (
+                    <h3 className="text-lg font-bold text-textPrimary">{currentUser?.name || currentUser?.username || "Customer User"}</h3>
+                  )}
                   <p className="text-sm text-textSecondary flex items-center mt-1">
                     <Mail size={14} className="mr-1.5" />
                     {currentUser?.email || "No email provided"}

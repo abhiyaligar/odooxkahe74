@@ -1,11 +1,14 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useErpStore } from '../store/erpStore';
 import { api } from '../api/client';
 import { User, Mail, Shield, Calendar, Loader2 } from 'lucide-react';
 
 export default function Profile() {
   const { currentRole } = useErpStore();
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
 
   const { data: currentUser, isLoading, error } = useQuery({
     queryKey: ['currentUser'],
@@ -48,7 +51,14 @@ export default function Profile() {
     );
   }
 
-  const profileName = currentUser?.username || currentUser?.email?.split('@')[0] || "Unknown User";
+  const profileName = currentUser?.name || currentUser?.username || currentUser?.email?.split('@')[0] || "Unknown User";
+  
+  useEffect(() => {
+    if (currentUser?.name && !isEditing) {
+      setEditName(currentUser.name);
+    }
+  }, [currentUser, isEditing]);
+
   const profileEmail = currentUser?.email || "No email provided";
   const profileRole = currentUser?.role || currentRole;
   const createdAt = currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'N/A';
@@ -62,6 +72,40 @@ export default function Profile() {
           <h1 className="text-3xl font-bold tracking-tight text-textPrimary">My Profile</h1>
           <p className="text-sm text-textSecondary mt-1">Manage your account information and permissions.</p>
         </div>
+        {!isEditing ? (
+          <button 
+            onClick={() => {
+              setEditName(profileName);
+              setIsEditing(true);
+            }}
+            className="bg-elevated border border-border hover:bg-card text-textPrimary px-4 py-2 rounded-custom text-sm font-semibold transition-colors"
+          >
+            Edit Profile
+          </button>
+        ) : (
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setIsEditing(false)}
+              className="text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={async () => {
+                try {
+                  await api.put('/auth/me', { name: editName });
+                  queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editName }));
+                } catch (e) {
+                  queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editName }));
+                }
+                setIsEditing(false);
+              }}
+              className="bg-accent text-background px-4 py-2 rounded-custom text-sm font-semibold hover:bg-accent/90 transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Profile Card */}
@@ -79,7 +123,17 @@ export default function Profile() {
         {/* Info Area */}
         <div className="pt-16 pb-8 px-8 flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-textPrimary">{profileName}</h2>
+            {isEditing ? (
+              <input 
+                type="text" 
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="text-2xl font-bold text-textPrimary bg-background border border-border rounded px-2 py-1 focus:outline-none focus:border-accent w-full max-w-[250px]"
+                autoFocus
+              />
+            ) : (
+              <h2 className="text-2xl font-bold text-textPrimary">{profileName}</h2>
+            )}
             <div className="flex items-center space-x-2 text-sm text-textSecondary">
               <Mail size={16} />
               <span>{profileEmail}</span>
@@ -124,7 +178,7 @@ export default function Profile() {
           
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1">Username</p>
+              <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1">Name</p>
               <p className="text-sm font-medium text-textPrimary">{profileName}</p>
             </div>
             <div>
