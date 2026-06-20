@@ -19,7 +19,7 @@ frontend/
 ├── tailwind.config.js   # Custom dark/light colors and variables mapping
 └── src/
     ├── main.jsx         # App entry point
-    ├── App.jsx          # Route switcher and role guards mapping Page components
+    ├── App.jsx          # Fully integrated React Router routing and role guards mapping Page components
     ├── App.css          # Main stylesheet adjustments
     ├── index.css        # Core tailwind layers and CSS custom variables (Light/Dark mode)
     ├── assets/          # Static vector images (e.g. hero.png)
@@ -59,3 +59,8 @@ When a **Sales Order** is confirmed:
 - Theme selection is stored in `localStorage` and falls back to system preferences.
 - Defined variables in `index.css` map to Tailwind custom theme configurations so that colors adapt automatically.
 - Recharts graphics in the `Dashboard` dynamically query `document.documentElement` styles to paint theme-correct lines and grid axes.
+
+### C. Route Guards & Role-Based Access Control (RBAC)
+- Guest routes (`/login`, `/signup`) are guarded to redirect already authenticated users to their home base.
+- Customer routes (`/portal`) are restricted to users with the `Customer` role.
+- Internal ERP routes (`/dashboard`, `/products`, `/sales`, `/purchase`, `/bom`, `/manufacturing`) are restricted to staff roles and wrapped in the ERP sidebar layout.
