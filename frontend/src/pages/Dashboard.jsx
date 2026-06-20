@@ -8,9 +8,9 @@ import { getOrderStatusBreakdown } from '../utils/orderStatusBreakdown';
 import { 
   TrendingUp, 
   TrendingDown, 
-  ShoppingBag, 
+  ShoppingCart, 
   Truck, 
-  Factory, 
+  Package, 
   AlertTriangle 
 } from 'lucide-react';
 import { 
@@ -23,7 +23,8 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip 
+  Tooltip,
+  Label
 } from 'recharts';
 
 export default function Dashboard() {
@@ -76,6 +77,9 @@ export default function Dashboard() {
     }, 50);
     return () => clearTimeout(timer);
   }, [theme]);
+
+  // Shared styling pattern for all dashboard cards: 1px solid border, no shadow, unified rounded-xl
+  const dashboardCardClass = "bg-card border border-border shadow-none rounded-xl p-5";
 
   // 1. KPI Calculations
   const totalSales = salesOrders.length;
@@ -200,109 +204,193 @@ export default function Dashboard() {
       {/* 4 KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* KPI 1 */}
-        <div className="bg-card border border-border rounded-custom p-5 flex flex-col justify-between">
+        <div className={`${dashboardCardClass} flex flex-col justify-between`}>
           <div className="flex items-center justify-between text-textSecondary">
             <span className="text-xs font-medium tracking-wide">Total Sales Orders</span>
-            <ShoppingBag size={18} className="text-textMuted" />
+            <ShoppingCart size={20} strokeWidth={1.5} className="text-textMuted" />
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight">{totalSales}</span>
-            <span className="flex items-center text-[10px] font-medium text-statusGreen">
-              <TrendingUp size={10} className="mr-0.5" /> +12%
-            </span>
+            <span className={`text-2xl font-bold tracking-tight ${totalSales === 0 ? 'text-textMuted' : 'text-textPrimary'}`}>{totalSales}</span>
+            {totalSales > 0 && (
+              <span className="flex items-center text-[10px] font-medium text-success">
+                <TrendingUp size={10} className="mr-0.5" /> +12%
+              </span>
+            )}
           </div>
-          <span className="text-[10px] text-textMuted mt-1">vs previous month</span>
+          {totalSales === 0 ? (
+            <button onClick={() => navigate('/sales')} className="text-left text-[10px] text-accent hover:text-accentForeground underline mt-1 font-medium transition-colors">
+              Create your first sales order
+            </button>
+          ) : (
+            <span className="text-[10px] text-textMuted mt-1">vs previous month</span>
+          )}
         </div>
 
         {/* KPI 2 */}
-        <div className="bg-card border border-border rounded-custom p-5 flex flex-col justify-between">
+        <div className={`${dashboardCardClass} flex flex-col justify-between`}>
           <div className="flex items-center justify-between text-textSecondary">
             <span className="text-xs font-medium tracking-wide">Pending Deliveries</span>
-            <Truck size={18} className="text-textMuted" />
+            <Truck size={20} strokeWidth={1.5} className="text-textMuted" />
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight">{pendingDeliveries}</span>
-            <span className="flex items-center text-[10px] font-medium text-textSecondary">
-              Stable
-            </span>
+            <span className={`text-2xl font-bold tracking-tight ${pendingDeliveries === 0 ? 'text-textMuted' : 'text-textPrimary'}`}>{pendingDeliveries}</span>
+            {pendingDeliveries > 0 && (
+              <span className="flex items-center text-[10px] font-medium text-textSecondary">
+                Stable
+              </span>
+            )}
           </div>
-          <span className="text-[10px] text-textMuted mt-1">Awaiting dispatch</span>
+          {pendingDeliveries === 0 ? (
+            <button onClick={() => navigate('/sales')} className="text-left text-[10px] text-accent hover:text-accentForeground underline mt-1 font-medium transition-colors">
+              View sales to process
+            </button>
+          ) : (
+            <span className="text-[10px] text-textMuted mt-1">Awaiting dispatch</span>
+          )}
         </div>
 
         {/* KPI 3 */}
-        <div className="bg-card border border-border rounded-custom p-5 flex flex-col justify-between">
+        <div className={`${dashboardCardClass} flex flex-col justify-between`}>
           <div className="flex items-center justify-between text-textSecondary">
             <span className="text-xs font-medium tracking-wide">Active Mfg Orders</span>
-            <Factory size={18} className="text-textMuted" />
+            <Package size={20} strokeWidth={1.5} className="text-textMuted" />
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight">{activeMOs}</span>
-            <span className="flex items-center text-[10px] font-medium text-statusGreen">
-              <TrendingUp size={10} className="mr-0.5" /> +4
-            </span>
+            <span className={`text-2xl font-bold tracking-tight ${activeMOs === 0 ? 'text-textMuted' : 'text-textPrimary'}`}>{activeMOs}</span>
+            {activeMOs > 0 && (
+              <span className="flex items-center text-[10px] font-medium text-success">
+                <TrendingUp size={10} className="mr-0.5" /> +4
+              </span>
+            )}
           </div>
-          <span className="text-[10px] text-textMuted mt-1">In progress on floor</span>
+          {activeMOs === 0 ? (
+            <button onClick={() => navigate('/manufacturing')} className="text-left text-[10px] text-accent hover:text-accentForeground underline mt-1 font-medium transition-colors">
+              Create a manufacturing order
+            </button>
+          ) : (
+            <span className="text-[10px] text-textMuted mt-1">In progress on floor</span>
+          )}
         </div>
 
         {/* KPI 4 */}
-        <div className="bg-card border border-border rounded-custom p-5 flex flex-col justify-between">
+        <div className={`${dashboardCardClass} flex flex-col justify-between`}>
           <div className="flex items-center justify-between text-textSecondary">
             <span className="text-xs font-medium tracking-wide">Material Shortages</span>
-            <AlertTriangle size={18} className="text-textMuted" />
+            <AlertTriangle size={20} strokeWidth={1.5} className="text-textMuted" />
           </div>
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-statusRed">{materialShortages}</span>
+            <span className={`text-2xl font-bold tracking-tight ${materialShortages === 0 ? 'text-textMuted' : 'text-danger'}`}>{materialShortages}</span>
             {materialShortages > 0 ? (
-              <span className="flex items-center text-[10px] font-medium text-statusRed">
+              <span className="flex items-center text-[10px] font-medium text-danger">
                 <TrendingDown size={10} className="mr-0.5" /> Shortfall
               </span>
             ) : (
-              <span className="flex items-center text-[10px] font-medium text-statusGreen">
+              <span className="flex items-center text-[10px] font-medium text-success">
                 None
               </span>
             )}
           </div>
-          <span className="text-[10px] text-textMuted mt-1">Deficits to resolve</span>
+          {materialShortages === 0 ? (
+            <button onClick={() => navigate('/products')} className="text-left text-[10px] text-accent hover:text-accentForeground underline mt-1 font-medium transition-colors">
+              Review stock levels
+            </button>
+          ) : (
+            <span className="text-[10px] text-textMuted mt-1">Deficits to resolve</span>
+          )}
         </div>
       </div>
 
       {/* 2 Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Line Chart */}
-        <div className="bg-card border border-border rounded-custom p-5">
+        <div className={dashboardCardClass}>
           <div className="mb-4">
             <h3 className="text-sm font-semibold tracking-tight">Stock Movement Ledger</h3>
-            <p className="text-[11px] text-textSecondary">On Hand vs Reserved inventory trends over the last 7 days</p>
+            <p className="text-[11px] text-textSecondary mb-2">On Hand vs Reserved inventory trends over the last 7 days</p>
+            {/* Custom Legend */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-1.5">
+                <div className="w-4 h-[2px] bg-textPrimary rounded-full"></div>
+                <span className="text-[11px] text-textSecondary font-medium">On Hand</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <div className="w-4 h-[1.5px] border-b-[1.5px] border-dashed border-textPrimary"></div>
+                <span className="text-[11px] text-textSecondary font-medium">Reserved</span>
+              </div>
+            </div>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stockMovementData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={stockMovementData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.border} vertical={false} />
                 <XAxis dataKey="day" stroke={chartColors.disabled} fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke={chartColors.disabled} fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke={chartColors.disabled} fontSize={10} tickLine={false} axisLine={false}>
+                  <Label 
+                    value="Units" 
+                    angle={-90} 
+                    position="insideLeft" 
+                    style={{ fill: chartColors.mutedForeground, fontSize: 10, fontWeight: 500 }} 
+                  />
+                </YAxis>
                 <Tooltip 
                   contentStyle={{ backgroundColor: chartColors.elevated, border: `1px solid ${chartColors.border}`, borderRadius: "6px" }}
                   labelStyle={{ color: chartColors.foreground, fontSize: "11px", fontWeight: "bold" }}
                   itemStyle={{ color: chartColors.mutedForeground, fontSize: "11px" }}
                 />
                 <Line type="monotone" dataKey="onHand" stroke={chartColors.foreground} strokeWidth={2} name="On Hand" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="reserved" stroke={chartColors.mutedForeground} strokeWidth={1.5} name="Reserved" strokeDasharray="4 4" dot={{ r: 2 }} />
+                <Line type="monotone" dataKey="reserved" stroke={chartColors.foreground} strokeWidth={1.5} name="Reserved" strokeDasharray="4 4" dot={{ r: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Order Status Breakdown Donut Chart */}
-        <div className="bg-card border border-border rounded-custom p-5">
+        <div className={dashboardCardClass}>
           <div className="mb-4">
             <h3 className="text-sm font-semibold tracking-tight">Order Status Breakdown</h3>
             <p className="text-[11px] text-textSecondary">Live distribution across Sales, Purchase, and Manufacturing orders</p>
           </div>
           {totalOrders === 0 ? (
-            <div className="h-64 w-full flex items-center justify-center">
-              <p className="text-xs text-textMuted text-center max-w-xs leading-relaxed">
-                No orders yet — create a Sales, Purchase, or Manufacturing order to see status distribution here.
-              </p>
+            <div className="relative h-64 w-full flex items-center justify-center">
+              {/* Faded Skeleton Donut */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                <div className="h-56 w-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { value: 40, color: chartColors.disabled },
+                          { value: 35, color: chartColors.mutedForeground },
+                          { value: 25, color: chartColors.border }
+                        ]}
+                        dataKey="value"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={85}
+                        paddingAngle={2}
+                        stroke="none"
+                        isAnimationActive={false}
+                      >
+                        {[
+                          { value: 40, color: chartColors.disabled },
+                          { value: 35, color: chartColors.mutedForeground },
+                          { value: 25, color: chartColors.border }
+                        ].map((entry, idx) => (
+                          <Cell key={idx} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              
+              {/* Centered Overlay Text */}
+              <div className="relative z-10 max-w-xs text-center px-4 py-2">
+                <p className="text-xs text-textMuted leading-relaxed">
+                  No orders yet — create a Sales, Purchase, or Manufacturing order to see status distribution here.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
@@ -362,7 +450,7 @@ export default function Dashboard() {
       </div>
 
       {/* Alerts Feed Section */}
-      <div className="bg-card border border-border rounded-custom p-5">
+      <div className={dashboardCardClass}>
         <h3 className="text-sm font-semibold tracking-tight mb-4">Operations Alerts Feed</h3>
         <div className="divide-y divide-border border border-border rounded-custom overflow-hidden">
           {alerts.map((alert, idx) => (
@@ -376,9 +464,9 @@ export default function Dashboard() {
               <div className="flex items-center space-x-3">
                 {/* Status Dot */}
                 <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${
-                  alert.type === "red" ? 'bg-statusRed shadow-[0_0_8px_rgba(239,68,68,0.3)]' :
-                  alert.type === "amber" ? 'bg-statusAmber shadow-[0_0_8px_rgba(234,179,8,0.3)]' :
-                  'bg-statusGreen shadow-[0_0_8px_rgba(34,197,94,0.3)]'
+                  alert.type === "red" ? 'bg-danger shadow-[0_0_8px_rgba(239,68,68,0.3)]' :
+                  alert.type === "amber" ? 'bg-warning shadow-[0_0_8px_rgba(234,179,8,0.3)]' :
+                  'bg-success shadow-[0_0_8px_rgba(34,197,94,0.3)]'
                 }`} />
                 <span className="text-xs text-textPrimary tracking-wide font-medium">{alert.message}</span>
               </div>

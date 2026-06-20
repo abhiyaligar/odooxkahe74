@@ -13,7 +13,9 @@ import {
   ChevronLeft, 
   ChevronRight,
   ShieldAlert,
-  User
+  User,
+  Users,
+  Activity
 } from 'lucide-react';
 
 export const Layout = ({ children }) => {
@@ -26,7 +28,7 @@ export const Layout = ({ children }) => {
   // Role details mapping
   const roleDisplayNames = {
     SuperAdmin: "Super Admin",
-    StoreAdmin: "Store Admin (Admin)",
+    StoreAdmin: "Store Admin",
     SalesUser: "Sales User",
     PurchaseUser: "Purchase User",
     ManufacturingUser: "Manufacturing User",
@@ -83,6 +85,18 @@ export const Layout = ({ children }) => {
       path: "/manufacturing", 
       icon: Factory,
       roles: ["SuperAdmin", "StoreAdmin", "PurchaseUser", "ManufacturingUser", "InventoryManager", "BusinessOwner"]
+    },
+    { 
+      name: "Vendors", 
+      path: "/vendors", 
+      icon: Users,
+      roles: ["SuperAdmin", "StoreAdmin"]
+    },
+    { 
+      name: "Audit Logs", 
+      path: "/audit-logs", 
+      icon: Activity,
+      roles: ["SuperAdmin"]
     }
   ];
 
@@ -147,10 +161,10 @@ export const Layout = ({ children }) => {
               <button
                 key={item.name}
                 onClick={() => navigate(item.path)}
-                className={`flex w-full items-center py-3 px-4 text-left transition-all duration-150 ${
+                className={`flex w-full items-center py-3 px-4 text-left transition-all duration-150 border-l-[3px] ${
                   isActive 
-                    ? 'bg-elevated border-l-2 border-accent text-textPrimary' 
-                    : 'text-textSecondary hover:bg-elevated/40 hover:text-textPrimary border-l-2 border-transparent'
+                    ? 'bg-accent/10 border-accent text-textPrimary' 
+                    : 'text-textSecondary hover:bg-elevated/40 hover:text-textPrimary border-transparent'
                 }`}
               >
                 <Icon size={18} className={`${isActive ? 'text-textPrimary' : 'text-textSecondary'} shrink-0`} />
@@ -164,20 +178,7 @@ export const Layout = ({ children }) => {
           })}
         </nav>
 
-        {/* Sidebar Footer Role Indicator */}
-        <div className="border-t border-border p-3 flex items-center justify-center">
-          <div className={`flex items-center w-full ${isCollapsed ? 'justify-center' : 'justify-start space-x-2'}`}>
-            <div className="h-6 w-6 flex items-center justify-center rounded-full bg-border text-[10px] font-mono text-textSecondary">
-              {roleInitials[currentRole]}
-            </div>
-            {!isCollapsed && (
-              <div className="flex flex-col text-[11px]">
-                <span className="font-semibold text-textSecondary">Active Role</span>
-                <span className="text-[10px] text-textMuted font-mono">{roleDisplayNames[currentRole]}</span>
-              </div>
-            )}
-          </div>
-        </div>
+
       </aside>
 
       {/* Main Content Area */}
@@ -205,41 +206,13 @@ export const Layout = ({ children }) => {
             {/* Theme Switcher Toggle */}
             <ThemeToggle />
 
-            {/* Role Switcher Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-                className="flex items-center space-x-2 bg-elevated hover:bg-card border border-border rounded-custom px-3 py-1.5 text-xs text-textPrimary font-medium transition-all duration-150"
-              >
-                <ShieldAlert size={14} className="text-textSecondary" />
-                <span>Role: {roleDisplayNames[currentRole]}</span>
-              </button>
-
-              {showRoleDropdown && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-20" 
-                    onClick={() => setShowRoleDropdown(false)}
-                  />
-                  <div className="absolute right-0 mt-1.5 w-56 rounded-custom border border-border bg-elevated py-1 shadow-2xl z-30">
-                    <div className="px-3 py-1.5 border-b border-border">
-                      <span className="text-[10px] font-semibold text-textMuted uppercase tracking-wider">Switch System Role</span>
-                    </div>
-                    {Object.entries(roleDisplayNames).map(([key, name]) => (
-                      <button
-                        key={key}
-                        onClick={() => handleRoleChange(key)}
-                        className={`flex w-full items-center px-3 py-2 text-left text-xs hover:bg-card transition-all duration-150 ${
-                          currentRole === key ? 'text-accent font-semibold bg-card/65' : 'text-textSecondary'
-                        }`}
-                      >
-                        <span className="mr-2 text-[10px] font-mono opacity-50">[{roleInitials[key]}]</span>
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+            {/* Role Display */}
+            <div 
+              className="flex items-center space-x-2 bg-elevated border border-border rounded-custom px-3 py-1.5 text-xs text-textPrimary font-medium"
+              title={`Current permissions bound to: ${roleDisplayNames[currentRole]}`}
+            >
+              <ShieldAlert size={14} className="text-textSecondary" />
+              <span>{roleDisplayNames[currentRole]}</span>
             </div>
 
             {/* User Avatar & Logout */}
@@ -250,9 +223,9 @@ export const Layout = ({ children }) => {
                 }
               }}
               title="Sign Out"
-              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary hover:text-statusRed transition-colors duration-150"
+              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary hover:text-danger transition-colors duration-150"
             >
-              SF
+              <User size={16} />
             </button>
           </div>
         </header>
