@@ -2,6 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useErpStore } from '../store/erpStore';
 import { useTheme } from '../components/common/ThemeProvider';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
 import { getOrderStatusBreakdown } from '../utils/orderStatusBreakdown';
 import { 
   TrendingUp, 
@@ -27,14 +29,31 @@ import {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  
   const { 
-    salesOrders, 
-    purchaseOrders, 
-    manufacturingOrders, 
-    products, 
     auditLogs,
     stockLedger
   } = useErpStore();
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products/')
+  });
+
+  const { data: salesOrders = [] } = useQuery({
+    queryKey: ['salesOrders'],
+    queryFn: () => api.get('/sales-orders/')
+  });
+
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ['purchaseOrders'],
+    queryFn: () => api.get('/purchase-orders/')
+  });
+
+  const { data: manufacturingOrders = [] } = useQuery({
+    queryKey: ['manufacturingOrders'],
+    queryFn: () => api.get('/manufacturing-orders/')
+  });
 
   const [chartColors, setChartColors] = React.useState({
     border: "#2A2C2E",

@@ -17,7 +17,6 @@ import {
   MapPin, 
   Truck,
   ArrowLeft,
-  ShieldAlert,
   Loader2
 } from 'lucide-react';
 
@@ -65,8 +64,6 @@ export default function CustomerPortal() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Show views switcher dropdown
-  const [showViewDropdown, setShowViewDropdown] = useState(false);
 
   // Determine a customer ID to use for the portal
   const customerId = currentUser?.customer_profile?.id || null;
@@ -307,34 +304,7 @@ export default function CustomerPortal() {
             )}
           </button>
 
-          {/* Quick switcher to go back to internal ERP */}
-          <div className="relative">
-            <button
-              onClick={() => setShowViewDropdown(!showViewDropdown)}
-              className="flex items-center space-x-1.5 bg-elevated hover:bg-card border border-border rounded-custom px-3 py-1.5 text-[10px] text-textPrimary font-semibold transition-all duration-150"
-            >
-              <ShieldAlert size={12} className="text-textSecondary" />
-              <span>Demo Staff Login</span>
-            </button>
 
-            {showViewDropdown && (
-              <>
-                <div className="fixed inset-0 z-20" onClick={() => setShowViewDropdown(false)} />
-                <div className="absolute right-0 mt-1.5 w-48 rounded-custom border border-border bg-elevated py-1 shadow-2xl z-30 text-xs">
-                  <div className="px-3 py-1.5 border-b border-border text-[9px] font-semibold text-textMuted uppercase">Return to internal ERP</div>
-                  <button
-                    onClick={() => {
-                      setCurrentRole("StoreAdmin");
-                      setShowViewDropdown(false);
-                    }}
-                    className="flex w-full items-center px-3 py-2 hover:bg-card text-textSecondary hover:text-textPrimary transition-all duration-150 font-mono text-[11px]"
-                  >
-                    [AD] Store Admin
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
         </div>
       </header>
 

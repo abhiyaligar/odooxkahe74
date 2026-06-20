@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { SlideOver } from '../components/common/SlideOver';
 import { 
@@ -16,14 +16,10 @@ import {
 } from 'lucide-react';
 
 export default function PurchaseOrders() {
+  const queryClient = useQueryClient();
+
   const { 
-    purchaseOrders, 
-    purchaseOrderLines, 
-    currentRole,
-    createPurchaseOrder,
-    confirmPurchaseOrder,
-    receivePurchaseOrderLine,
-    cancelPurchaseOrder
+    currentRole
   } = useErpStore();
 
   const { data: products = [] } = useQuery({
@@ -34,6 +30,11 @@ export default function PurchaseOrders() {
   const { data: vendors = [] } = useQuery({
     queryKey: ['vendors'],
     queryFn: () => api.get('/vendors/')
+  });
+
+  const { data: purchaseOrders = [], refetch: refetchPos } = useQuery({
+    queryKey: ['purchaseOrders'],
+    queryFn: () => api.get('/purchase-orders/')
   });
 
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -60,22 +61,72 @@ export default function PurchaseOrders() {
            (vendor && vendor.name.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
-  const getOrderTotal = (poId) => {
-    const lines = purchaseOrderLines.filter(l => l.purchase_order_id === poId);
+  const getOrderTotal = (po) => {
+    const lines = po?.lines || [];
     return lines.reduce((sum, line) => sum + (line.quantity_ordered * line.unit_cost), 0);
   };
 
-  const getOrderItemCount = (poId) => {
-    const lines = purchaseOrderLines.filter(l => l.purchase_order_id === poId);
+  const getOrderItemCount = (po) => {
+    const lines = po?.lines || [];
     return lines.reduce((sum, line) => sum + line.quantity_ordered, 0);
   };
+
+  const createPoMutation = useMutation({
+    mutationFn: (newPo) => api.post('/purchase-orders/', newPo),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      handleRowClick(data);
+    },
+    onError: (err) => alert("Failed to create order: " + err.message)
+  });
+
+  const confirmPoMutation = useMutation({
+    mutationFn: (id) => api.post(`/purchase-orders/${id}/confirm`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      refetchPos().then(res => {
+        if (selectedOrder && res.data) {
+          setSelectedOrder(res.data.find(o => o.id === selectedOrder.id));
+        }
+      });
+    },
+    onError: (err) => alert("Failed to confirm order: " + err.message)
+  });
+
+  const receiveLineMutation = useMutation({
+    mutationFn: ({ lineId, qty }) => api.post(`/purchase-orders/lines/${lineId}/receive`, { quantity_received: qty }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setSelectedOrder(data);
+      const updatedInputs = { ...receiptInputs };
+      (data.lines || []).forEach(l => {
+        updatedInputs[l.id] = l.quantity_ordered - l.quantity_received;
+      });
+      setReceiptInputs(updatedInputs);
+    },
+    onError: (err) => alert("Failed to receive goods: " + err.message)
+  });
+
+  const cancelPoMutation = useMutation({
+    mutationFn: (id) => api.post(`/purchase-orders/${id}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchaseOrders'] });
+      refetchPos().then(res => {
+        if (selectedOrder && res.data) {
+          setSelectedOrder(res.data.find(o => o.id === selectedOrder.id));
+        }
+      });
+    },
+    onError: (err) => alert("Failed to cancel order: " + err.message)
+  });
 
   const handleRowClick = (po) => {
     setSelectedOrder(po);
     setIsCreating(false);
     
     // Reset receipt inputs
-    const lines = purchaseOrderLines.filter(l => l.purchase_order_id === po.id);
+    const lines = po.lines || [];
     const initialInputs = {};
     lines.forEach(l => {
       initialInputs[l.id] = l.quantity_ordered - l.quantity_received;
@@ -140,52 +191,33 @@ export default function PurchaseOrders() {
       return;
     }
 
-    const poId = createPurchaseOrder(vendorSelect, orderLines);
+    createPoMutation.mutate({
+      vendor_id: vendorSelect,
+      lines: orderLines.map(l => ({
+        product_id: l.product_id,
+        quantity_ordered: Number(l.quantity),
+        unit_cost: Number(l.unit_cost)
+      }))
+    });
     setIsSlideOverOpen(false);
-    
-    // Open detail of newly created order
-    const state = useErpStore.getState();
-    const createdPo = state.purchaseOrders.find(o => o.id === poId);
-    if (createdPo) {
-      handleRowClick(createdPo);
-    }
   };
 
   const handleConfirm = () => {
     if (!canModify || !selectedOrder) return;
-    confirmPurchaseOrder(selectedOrder.id);
-    const state = useErpStore.getState();
-    setSelectedOrder(state.purchaseOrders.find(o => o.id === selectedOrder.id));
+    confirmPoMutation.mutate(selectedOrder.id);
   };
 
   const handleCancel = () => {
     if (!canModify || !selectedOrder) return;
     if (window.confirm("Are you sure you want to cancel this Purchase Order?")) {
-      cancelPurchaseOrder(selectedOrder.id);
-      const state = useErpStore.getState();
-      setSelectedOrder(state.purchaseOrders.find(o => o.id === selectedOrder.id));
+      cancelPoMutation.mutate(selectedOrder.id);
     }
   };
 
   const handleReceive = (lineId) => {
     if (!canModify || !selectedOrder) return;
     const qty = Number(receiptInputs[lineId] || 0);
-    try {
-      receivePurchaseOrderLine(selectedOrder.id, lineId, qty);
-      const state = useErpStore.getState();
-      setSelectedOrder(state.purchaseOrders.find(o => o.id === selectedOrder.id));
-      
-      // Update receipt input
-      const updatedLine = state.purchaseOrderLines.find(l => l.id === lineId);
-      if (updatedLine) {
-        setReceiptInputs(prev => ({
-          ...prev,
-          [lineId]: updatedLine.quantity_ordered - updatedLine.quantity_delivered
-        }));
-      }
-    } catch (err) {
-      alert(err.message);
-    }
+    receiveLineMutation.mutate({ lineId, qty });
   };
 
   // Stepper Stages for PO
@@ -491,22 +523,20 @@ export default function PurchaseOrders() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {purchaseOrderLines
-                        .filter(l => l.purchase_order_id === selectedOrder.id)
-                        .map(line => {
-                          const prod = products.find(p => p.id === line.product_id);
-                          return (
-                            <tr key={line.id} className="hover:bg-elevated/10">
-                              <td className="py-2 px-3 text-textPrimary font-sans font-medium">{prod?.name || 'Unknown'}</td>
-                              <td className="py-2 px-3 text-right">{line.quantity_ordered}</td>
-                              <td className="py-2 px-3 text-right text-textSecondary">{line.quantity_received}</td>
-                              <td className="py-2 px-3 text-right text-textSecondary">${line.unit_cost.toFixed(2)}</td>
-                              <td className="py-2 px-3 text-right text-textPrimary font-bold">
-                                ${(line.quantity_ordered * line.unit_cost).toFixed(2)}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                      {(selectedOrder.lines || []).map(line => {
+                        const prod = products.find(p => p.id === line.product_id);
+                        return (
+                          <tr key={line.id} className="hover:bg-elevated/10">
+                            <td className="py-2 px-3 text-textPrimary font-sans font-medium">{prod?.name || 'Unknown'}</td>
+                            <td className="py-2 px-3 text-right">{line.quantity_ordered}</td>
+                            <td className="py-2 px-3 text-right text-textSecondary">{line.quantity_received}</td>
+                            <td className="py-2 px-3 text-right text-textSecondary">${line.unit_cost.toFixed(2)}</td>
+                            <td className="py-2 px-3 text-right text-textPrimary font-bold">
+                              ${(line.quantity_ordered * line.unit_cost).toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -521,71 +551,67 @@ export default function PurchaseOrders() {
                   </div>
 
                   <div className="space-y-4">
-                    {purchaseOrderLines
-                      .filter(l => l.purchase_order_id === selectedOrder.id)
-                      .map(line => {
-                        const prod = products.find(p => p.id === line.product_id);
-                        const remaining = line.quantity_ordered - line.quantity_received;
-                        
-                        if (remaining <= 0) return null;
+                    {(selectedOrder.lines || []).map(line => {
+                      const prod = products.find(p => p.id === line.product_id);
+                      const remaining = line.quantity_ordered - line.quantity_received;
+                      
+                      if (remaining <= 0) return null;
 
-                        const inputVal = Number(receiptInputs[line.id] || 0);
-                        const currentStock = prod ? prod.on_hand_qty : 0;
-                        const targetStock = currentStock + inputVal;
+                      const inputVal = Number(receiptInputs[line.id] || 0);
+                      const currentStock = prod ? prod.on_hand_qty : 0;
+                      const targetStock = currentStock + inputVal;
 
-                        return (
-                          <div key={line.id} className="space-y-2 border-b border-border/40 pb-3 last:border-0 last:pb-0">
-                            {/* Input control */}
-                            <div className="flex items-center justify-between text-xs">
-                              <div className="flex flex-col">
-                                <span className="font-semibold text-textPrimary">{prod?.name}</span>
-                                <span className="text-[10px] text-textMuted font-mono">
-                                  Remaining: {remaining} unit(s)
-                                </span>
-                              </div>
-
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max={remaining}
-                                  value={receiptInputs[line.id] || 0}
-                                  onChange={(e) => setReceiptInputs({
-                                    ...receiptInputs,
-                                    [line.id]: Math.min(remaining, Math.max(1, Number(e.target.value)))
-                                  })}
-                                  disabled={!canModify}
-                                  className="w-16 font-mono text-center py-1 text-xs"
-                                />
-                                <button
-                                  type="button"
-                                  disabled={!canModify}
-                                  onClick={() => handleReceive(line.id)}
-                                  className="bg-elevated hover:bg-card border border-border text-textPrimary text-[11px] rounded-custom px-3 py-1 font-semibold transition-all duration-150 font-mono"
-                                >
-                                  Receive
-                                </button>
-                              </div>
+                      return (
+                        <div key={line.id} className="space-y-2 border-b border-border/40 pb-3 last:border-0 last:pb-0">
+                          {/* Input control */}
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-textPrimary">{prod?.name}</span>
+                              <span className="text-[10px] text-textMuted font-mono">
+                                Remaining: {remaining} unit(s)
+                              </span>
                             </div>
 
-                            {/* Stock delta visualizer */}
-                            {inputVal > 0 && prod && (
-                              <div className="bg-card border border-border p-2 rounded text-[10px] font-mono text-textSecondary flex items-center space-x-2 justify-center">
-                                <span>Stock Delta: {currentStock} on hand</span>
-                                <ArrowRight size={10} />
-                                <span className="text-statusGreen font-bold">+{inputVal} received</span>
-                                <ArrowRight size={10} />
-                                <span className="text-textPrimary font-bold">{targetStock} resulting</span>
-                              </div>
-                            )}
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="number"
+                                min="1"
+                                max={remaining}
+                                value={receiptInputs[line.id] || 0}
+                                onChange={(e) => setReceiptInputs({
+                                  ...receiptInputs,
+                                  [line.id]: Math.min(remaining, Math.max(1, Number(e.target.value)))
+                                })}
+                                disabled={!canModify}
+                                className="w-16 font-mono text-center py-1 text-xs"
+                              />
+                              <button
+                                type="button"
+                                disabled={!canModify}
+                                onClick={() => handleReceive(line.id)}
+                                className="bg-elevated hover:bg-card border border-border text-textPrimary text-[11px] rounded-custom px-3 py-1 font-semibold transition-all duration-150 font-mono"
+                              >
+                                Receive
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })}
-                    {purchaseOrderLines
-                      .filter(l => l.purchase_order_id === selectedOrder.id)
-                      .every(l => l.quantity_ordered === l.quantity_received) && (
-                        <p className="text-[11px] text-statusGreen italic text-center font-semibold">All products have been received from the vendor and logged into stock.</p>
-                      )}
+
+                          {/* Stock delta visualizer */}
+                          {inputVal > 0 && prod && (
+                            <div className="bg-card border border-border p-2 rounded text-[10px] font-mono text-textSecondary flex items-center space-x-2 justify-center">
+                              <span>Stock Delta: {currentStock} on hand</span>
+                              <ArrowRight size={10} />
+                              <span className="text-statusGreen font-bold">+{inputVal} received</span>
+                              <ArrowRight size={10} />
+                              <span className="text-textPrimary font-bold">{targetStock} resulting</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {(selectedOrder.lines || []).every(l => l.quantity_ordered === l.quantity_received) && (
+                      <p className="text-[11px] text-statusGreen italic text-center font-semibold">All products have been received from the vendor and logged into stock.</p>
+                    )}
                   </div>
                 </div>
               )}

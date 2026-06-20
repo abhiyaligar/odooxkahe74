@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { SlideOver } from '../components/common/SlideOver';
 import { 
@@ -17,26 +17,119 @@ import {
 } from 'lucide-react';
 
 export default function Manufacturing() {
+  const queryClient = useQueryClient();
+
   const { 
-    manufacturingOrders, 
-    workOrders, 
     workCenters, 
     bomOperations,
-    bomLines,
-    currentRole,
-    createManufacturingOrder,
-    confirmManufacturingOrder,
-    startWorkOrder,
-    completeWorkOrder,
-    completeManufacturingOrder,
-    cancelManufacturingOrder
+    currentRole
   } = useErpStore();
+
+  const { data: manufacturingOrders = [], refetch: refetchMos } = useQuery({
+    queryKey: ['manufacturingOrders'],
+    queryFn: () => api.get('/manufacturing-orders/')
+  });
 
   const [selectedMo, setSelectedMo] = useState(null);
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const createMoMutation = useMutation({
+    mutationFn: (newMo) => api.post('/manufacturing-orders/', newMo),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturingOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      handleRowClick(data);
+    },
+    onError: (err) => setErrorMessage("Failed to create order: " + err.message)
+  });
+
+  const confirmMoMutation = useMutation({
+    mutationFn: (id) => api.post(`/manufacturing-orders/${id}/confirm`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturingOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      refetchMos().then(res => {
+        if (selectedMo && res.data) {
+          setSelectedMo(res.data.find(o => o.id === selectedMo.id));
+        }
+      });
+    },
+    onError: (err) => setErrorMessage("Failed to confirm order: " + err.message)
+  });
+
+  const startMoMutation = useMutation({
+    mutationFn: (id) => api.post(`/manufacturing-orders/${id}/start`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturingOrders'] });
+      refetchMos().then(res => {
+        if (selectedMo && res.data) {
+          setSelectedMo(res.data.find(o => o.id === selectedMo.id));
+        }
+      });
+    },
+    onError: (err) => setErrorMessage("Failed to start order: " + err.message)
+  });
+
+  const startWoMutation = useMutation({
+    mutationFn: ({ moId, woId }) => api.post(`/manufacturing-orders/${moId}/work-orders/${woId}/start`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturingOrders'] });
+      refetchMos().then(res => {
+        if (selectedMo && res.data) {
+          setSelectedMo(res.data.find(o => o.id === selectedMo.id));
+        }
+      });
+    },
+    onError: (err) => setErrorMessage("Failed to start operation: " + err.message)
+  });
+
+  const completeWoMutation = useMutation({
+    mutationFn: ({ moId, woId }) => api.post(`/manufacturing-orders/${moId}/work-orders/${woId}/complete`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturingOrders'] });
+      refetchMos().then(res => {
+        if (selectedMo && res.data) {
+          const updated = res.data.find(o => o.id === selectedMo.id);
+          setSelectedMo(updated);
+          if (updated && updated.work_orders.every(w => w.status === "Done")) {
+            completeMoMutation.mutate(updated.id);
+          }
+        }
+      });
+    },
+    onError: (err) => setErrorMessage("Failed to complete operation: " + err.message)
+  });
+
+  const completeMoMutation = useMutation({
+    mutationFn: (id) => api.post(`/manufacturing-orders/${id}/complete`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturingOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      refetchMos().then(res => {
+        if (selectedMo && res.data) {
+          setSelectedMo(res.data.find(o => o.id === selectedMo.id));
+        }
+      });
+    },
+    onError: (err) => setErrorMessage("Failed to complete order: " + err.message)
+  });
+
+  const cancelMoMutation = useMutation({
+    mutationFn: (id) => api.post(`/manufacturing-orders/${id}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manufacturingOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      refetchMos().then(res => {
+        if (selectedMo && res.data) {
+          setSelectedMo(res.data.find(o => o.id === selectedMo.id));
+        }
+      });
+    },
+    onError: (err) => setErrorMessage("Failed to cancel order: " + err.message)
+  });
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -93,79 +186,47 @@ export default function Manufacturing() {
       return;
     }
 
-    try {
-      const moId = createManufacturingOrder(productSelect, Number(qtyToProduce));
-      setIsSlideOverOpen(false);
-
-      // Open detail of newly created MO
-      const state = useErpStore.getState();
-      const createdMo = state.manufacturingOrders.find(o => o.id === moId);
-      if (createdMo) {
-        handleRowClick(createdMo);
-      }
-    } catch (err) {
-      setErrorMessage(err.message);
-    }
+    createMoMutation.mutate({
+      product_id: productSelect,
+      bom_id: prod.bom_id,
+      quantity_to_produce: Number(qtyToProduce)
+    });
+    setIsSlideOverOpen(false);
   };
 
   const handleConfirm = () => {
     if (!canModify || !selectedMo) return;
-    confirmManufacturingOrder(selectedMo.id);
-    
-    // Refresh
-    const state = useErpStore.getState();
-    setSelectedMo(state.manufacturingOrders.find(o => o.id === selectedMo.id));
+    confirmMoMutation.mutate(selectedMo.id);
+  };
+
+  const handleStartMO = () => {
+    if (!canModify || !selectedMo) return;
+    startMoMutation.mutate(selectedMo.id);
   };
 
   const handleCancel = () => {
     if (!canModify || !selectedMo) return;
     if (window.confirm("Are you sure you want to cancel this Manufacturing Order? All component allocations will be released.")) {
-      cancelManufacturingOrder(selectedMo.id);
-      const state = useErpStore.getState();
-      setSelectedMo(state.manufacturingOrders.find(o => o.id === selectedMo.id));
+      cancelMoMutation.mutate(selectedMo.id);
     }
   };
 
   const handleStartStep = (woId) => {
-    if (!canModify) return;
+    if (!canModify || !selectedMo) return;
     setErrorMessage("");
-    try {
-      startWorkOrder(woId);
-      const state = useErpStore.getState();
-      // Sync selected MO state
-      if (selectedMo) {
-        setSelectedMo(state.manufacturingOrders.find(o => o.id === selectedMo.id));
-      }
-    } catch (err) {
-      setErrorMessage(err.message);
-    }
+    startWoMutation.mutate({ moId: selectedMo.id, woId });
   };
 
   const handleCompleteStep = (woId) => {
-    if (!canModify) return;
+    if (!canModify || !selectedMo) return;
     setErrorMessage("");
-    try {
-      completeWorkOrder(woId);
-      const state = useErpStore.getState();
-      // Sync selected MO state
-      if (selectedMo) {
-        setSelectedMo(state.manufacturingOrders.find(o => o.id === selectedMo.id));
-      }
-    } catch (err) {
-      setErrorMessage(err.message);
-    }
+    completeWoMutation.mutate({ moId: selectedMo.id, woId });
   };
 
   const handleCompleteMO = () => {
     if (!canModify || !selectedMo) return;
     setErrorMessage("");
-    try {
-      completeManufacturingOrder(selectedMo.id);
-      const state = useErpStore.getState();
-      setSelectedMo(state.manufacturingOrders.find(o => o.id === selectedMo.id));
-    } catch (err) {
-      setErrorMessage(err.message);
-    }
+    completeMoMutation.mutate(selectedMo.id);
   };
 
   // Stepper Stages for MO
@@ -277,7 +338,9 @@ export default function Manufacturing() {
                 // Calculate estimated duration
                 const bomRecord = recipes.find(b => b.id === mo.bom_id);
                 const opSteps = bomOperations.filter(bo => bo.bom_id === bomRecord?.id);
-                const totalMinutes = opSteps.reduce((sum, op) => sum + (op.duration_minutes * mo.quantity_to_produce), 0);
+                const totalMinutes = opSteps.length > 0
+                  ? opSteps.reduce((sum, op) => sum + (op.duration_minutes * mo.quantity_to_produce), 0)
+                  : 15 * mo.quantity_to_produce;
 
                 return (
                   <tr 
@@ -364,10 +427,10 @@ export default function Manufacturing() {
                 <span className="text-[10px] font-bold text-textSecondary uppercase tracking-wider block">Components Reservation Check</span>
                 {(() => {
                   const prod = products.find(p => p.id === productSelect);
-                  if (!prod || !prod.bom_id) return <p className="text-textMuted italic">No recipe found.</p>;
+                  const recipe = recipes.find(r => r.id === prod.bom_id);
+                  if (!recipe || !recipe.lines) return <p className="text-textMuted italic">No recipe found.</p>;
                   
-                  const lines = bomLines.filter(bl => bl.bom_id === prod.bom_id);
-                  return lines.map(line => {
+                  return recipe.lines.map(line => {
                     const comp = products.find(p => p.id === line.component_product_id);
                     if (!comp) return null;
                     const reqQty = line.quantity_required * Number(qtyToProduce);
@@ -467,25 +530,38 @@ export default function Manufacturing() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {selectedMo.components.map((compLine, idx) => {
-                        const prod = products.find(p => p.id === compLine.component_product_id);
-                        const isShortage = compLine.quantity_reserved < compLine.quantity_required;
-                        
-                        return (
-                          <tr key={idx} className="hover:bg-elevated/10">
-                            <td className="py-2 px-3 text-textPrimary font-sans font-medium">{prod?.name || 'Unknown'}</td>
-                            <td className="py-2 px-3 text-right">{compLine.quantity_required}</td>
-                            <td className="py-2 px-3 text-right text-textSecondary">{compLine.quantity_reserved}</td>
-                            <td className="py-2 px-3 text-center">
-                              <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded font-mono ${
-                                isShortage ? 'bg-statusRed/10 border border-statusRed/20 text-statusRed' : 'bg-statusGreen/10 border border-statusGreen/20 text-statusGreen'
-                              }`}>
-                                {isShortage ? "Shortage" : "Allocated"}
-                              </span>
-                            </td>
+                      {(() => {
+                        const recipe = recipes.find(r => r.id === selectedMo.bom_id);
+                        if (!recipe || !recipe.lines) return (
+                          <tr>
+                            <td colSpan="4" className="py-4 text-center text-textMuted italic">No recipe configuration found</td>
                           </tr>
                         );
-                      })}
+
+                        return recipe.lines.map((line, idx) => {
+                          const prod = products.find(p => p.id === line.component_product_id);
+                          const qtyRequired = line.quantity_required * selectedMo.quantity_to_produce;
+                          const isConfirmed = selectedMo.status !== "Draft" && selectedMo.status !== "Cancelled";
+                          const freeStock = prod ? Math.max(0, prod.on_hand_qty - prod.reserved_qty) : 0;
+                          const qtyReserved = isConfirmed ? qtyRequired : Math.min(qtyRequired, freeStock);
+                          const isShortage = qtyReserved < qtyRequired;
+
+                          return (
+                            <tr key={idx} className="hover:bg-elevated/10">
+                              <td className="py-2 px-3 text-textPrimary font-sans font-medium">{prod?.name || 'Unknown'}</td>
+                              <td className="py-2 px-3 text-right">{qtyRequired}</td>
+                              <td className="py-2 px-3 text-right text-textSecondary">{qtyReserved}</td>
+                              <td className="py-2 px-3 text-center">
+                                <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded font-mono ${
+                                  isShortage ? 'bg-statusRed/10 border border-statusRed/20 text-statusRed' : 'bg-statusGreen/10 border border-statusGreen/20 text-statusGreen'
+                                }`}>
+                                  {isShortage ? "Shortage" : "Allocated"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -508,16 +584,16 @@ export default function Manufacturing() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {workOrders
-                          .filter(w => w.manufacturing_order_id === selectedMo.id)
+                        {(selectedMo.work_orders || [])
                           .sort((a, b) => a.sequence - b.sequence)
                           .map(wo => {
                             const wcName = workCenters.find(w => w.id === wo.work_center_id)?.name || 'Unknown';
                             
-                            // Find matching BoM operation step duration
                             const bomRecord = recipes.find(b => b.id === selectedMo.bom_id);
                             const matchedOp = bomOperations.find(bo => bo.bom_id === bomRecord?.id && bo.operation_name === wo.operation_name);
-                            const duration = matchedOp ? matchedOp.duration_minutes * selectedMo.quantity_to_produce : 0;
+                            const duration = matchedOp 
+                              ? matchedOp.duration_minutes * selectedMo.quantity_to_produce 
+                              : 15 * selectedMo.quantity_to_produce;
 
                             return (
                               <tr key={wo.id} className="hover:bg-elevated/10">
@@ -601,8 +677,18 @@ export default function Manufacturing() {
                     </button>
                   )}
 
+                  {canModify && selectedMo.status === "Confirmed" && (
+                    <button
+                      type="button"
+                      onClick={handleStartMO}
+                      className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150"
+                    >
+                      Start Production
+                    </button>
+                  )}
+
                   {canModify && selectedMo.status === "InProgress" && 
-                   workOrders.filter(w => w.manufacturing_order_id === selectedMo.id).every(w => w.status === "Done") && (
+                   (selectedMo.work_orders || []).every(w => w.status === "Done") && (
                     <button
                       type="button"
                       onClick={handleCompleteMO}
