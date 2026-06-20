@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #F7F7F8;
+    --surface: #FFFFFF;
+    --surface-elevated: #FFFFFF;
+    --border: #E2E3E5;
+    --foreground: #131415;
+    --muted-foreground: #6B6D70;
+    --disabled: #C2C3C5;
+    --accent: #131415;
+    --accent-foreground: #F7F7F8;
+  }
+
+  .dark {
+    --background: #0E0E0F;
+    --surface: #18191B;
+    --surface-elevated: #1F2123;
+    --border: #2A2C2E;
+    --foreground: #F2F2F2;
+    --muted-foreground: #9A9C9E;
+    --disabled: #5C5E60;
+    --accent: #F2F2F2;
+    --accent-foreground: #0E0E0F;
+  }
+
+  body {
+    @apply bg-background text-textPrimary font-sans antialiased overflow-x-hidden;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Custom inputs/focus styles strictly matching the grayscale theme */
+  input, select, textarea {
+    @apply bg-card border border-border rounded-custom text-textPrimary px-3 py-1.5 text-sm focus:outline-none focus:border-accent transition-colors duration-150 placeholder:text-textMuted;
+  }
+
+  /* Thin grayscale custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+}
+
+.transition-all-custom {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
