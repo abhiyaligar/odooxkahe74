@@ -1,0 +1,37 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  darkMode: 'class',
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: "var(--background)",
+        card: "var(--surface)",
+        border: "var(--border)",
+        elevated: "var(--surface-elevated)",
+        accent: "var(--accent)",
+        accentForeground: "var(--accent-foreground)",
+        textPrimary: "var(--foreground)",
+        textSecondary: "var(--muted-foreground)",
+        textMuted: "var(--disabled)",
+        success: "var(--color-success)",
+        warning: "var(--color-warning)",
+        danger: "var(--color-danger)",
+      },
+      borderRadius: {
+        custom: "6px",
+      },
+      fontFamily: {
+        sans: ["var(--font-secondary)"],
+        primary: ["var(--font-primary)"],
+        secondary: ["var(--font-secondary)"],
+        tertiary: ["var(--font-tertiary)"],
+        mono: ["var(--font-tertiary)"],
+      },
+    },
+  },
+  plugins: [],
+}

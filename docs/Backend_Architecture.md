@@ -49,3 +49,14 @@ app/
 2. **Background Automation**: Operations that take time or trigger cascading changes (like Procurement Automation generating multiple nested POs/MOs) are handed off to Celery workers via Redis to ensure the main API remains perfectly responsive.
 3. **Database Transactions**: Any operation involving stock movement (e.g., Manufacturing Order Completion) MUST be wrapped in an async database transaction.
 4. **Hybrid Database Approach**: PostgreSQL handles the rigid relational demands (Orders, Inventory), while MongoDB handles the flexible document needs (AuditLogs where old/new value shapes vary drastically).
+
+## 4. Testing Strategy
+
+To ensure precision and accuracy without side effects, a full async testing ecosystem is established:
+
+- **Framework**: `pytest` and `pytest-asyncio` for executing asynchronous test routines.
+- **Client Mocking**: HTTPX `ASGITransport` binds directly to the FastAPI app instance, allowing us to perform fast, async requests against routers without spawning a live network server.
+- **Database Isolation**: The test runner overrides the FastAPI `get_db` dependency to yield an isolated database session connected to an **in-memory SQLite** database (`sqlite+aiosqlite:///:memory:`).
+- **PostgreSQL-to-SQLite Compat**: A custom SQLAlchemy compilation patch is injected inside `conftest.py` to translate PostgreSQL-specific `UUID(as_uuid=True)` columns to `CHAR(36)` strings, enabling the PostgreSQL schemas to instantiate perfectly on SQLite.
+- **Transaction Rollback**: Each test runs inside its own nested database transaction block. When a test completes, the transaction is rolled back, guaranteeing side-effect-free test runs.
+
