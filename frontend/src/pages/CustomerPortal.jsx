@@ -31,8 +31,6 @@ export default function CustomerPortal() {
     currentRole,
     setCurrentRole,
     logout
-    setCurrentRole,
-    logout
   } = useErpStore();
 
   // Fetch data
