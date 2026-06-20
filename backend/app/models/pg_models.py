@@ -198,6 +198,8 @@ class PurchaseOrder(Base):
     confirmed_at = Column(DateTime, nullable=True)
     received_at = Column(DateTime, nullable=True)
 
+    lines = relationship("PurchaseOrderLine", back_populates="purchase_order", cascade="all, delete-orphan")
+
 class PurchaseOrderLine(Base):
     __tablename__ = "purchase_order_lines"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
@@ -206,6 +208,8 @@ class PurchaseOrderLine(Base):
     quantity_ordered = Column(Float, nullable=False)
     quantity_received = Column(Float, default=0.0)
     unit_cost = Column(Float, nullable=False)
+
+    purchase_order = relationship("PurchaseOrder", back_populates="lines")
 
 class ManufacturingOrderStatus(str, enum.Enum):
     Draft = "Draft"

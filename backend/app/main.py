@@ -6,9 +6,22 @@ from app.api.v1.vendors import router as vendors_router
 from app.api.v1.customers import router as customers_router
 from app.api.v1.boms import router as boms_router
 from app.api.v1.manufacturing import router as manufacturing_router
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
 app = FastAPI(title=settings.PROJECT_NAME, version="1.0.0")
+
+origins = [
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(products_router, prefix="/api/v1/products", tags=["products"])

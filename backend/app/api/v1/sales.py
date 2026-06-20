@@ -88,7 +88,7 @@ async def confirm_sales_order(order_id: UUID, db: AsyncSession = Depends(get_db)
     # 2. Update status
     order.status = SalesOrderStatus.Confirmed
     
-    # 3. Reserve stock for each line
+    # 3. Reserve stock for each line and trigger procurement if shortage exists
     lines_result = await db.execute(select(SalesOrderLine).where(SalesOrderLine.sales_order_id == order.id))
     lines = lines_result.scalars().all()
     
@@ -96,10 +96,15 @@ async def confirm_sales_order(order_id: UUID, db: AsyncSession = Depends(get_db)
         prod_res = await db.execute(select(Product).where(Product.id == line.product_id))
         product = prod_res.scalars().first()
         if product:
+            free_qty = product.on_hand_qty - product.reserved_qty
+            shortage = line.quantity_ordered - free_qty
+            
             product.reserved_qty += line.quantity_ordered
             
-            # Procurement Automation Trigger would go here if free_to_use_qty < 0
-            
+            if shortage > 0:
+                from app.services.procurement import trigger_procurement
+                await trigger_procurement(product.id, shortage, db)
+                
     await db.commit()
     return {"message": "Order confirmed and stock reserved."}
 

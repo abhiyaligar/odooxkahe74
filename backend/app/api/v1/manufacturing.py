@@ -105,9 +105,10 @@ async def create_manufacturing_order(mo_in: MOCreate, db: AsyncSession = Depends
         )
         db.add(wo)
 
+    from app.services.procurement import check_mo_components_for_procurement
+    await check_mo_components_for_procurement(db_mo.id, db)
+
     await db.commit()
-
-
 
     # Reload and return
     return await get_mo_or_raise(db_mo.id, db)
