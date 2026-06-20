@@ -73,8 +73,8 @@ export const Layout = ({ children }) => {
       roles: ["SuperAdmin", "StoreAdmin", "PurchaseUser", "ManufacturingUser", "InventoryManager", "BusinessOwner"]
     },
     { 
-      name: "Bill of Materials", 
-      path: "/bom", 
+      name: "Recipes", 
+      path: "/recipes", 
       icon: Layers,
       roles: ["SuperAdmin", "StoreAdmin", "ManufacturingUser", "BusinessOwner"]
     },

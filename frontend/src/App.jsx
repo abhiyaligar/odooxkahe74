@@ -23,7 +23,7 @@ import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import SalesOrders from './pages/SalesOrders';
 import PurchaseOrders from './pages/PurchaseOrders';
-import BoM from './pages/BoM';
+import Recipes from './pages/Recipes';
 import Manufacturing from './pages/Manufacturing';
 
 // Role-based root redirector
@@ -124,7 +124,7 @@ function AppContent() {
               <Route path="products" element={<Products />} />
               <Route path="sales" element={<SalesOrders />} />
               <Route path="purchase" element={<PurchaseOrders />} />
-              <Route path="bom" element={<BoM />} />
+              <Route path="recipes" element={<Recipes />} />
               <Route path="manufacturing" element={<Manufacturing />} />
               <Route path="*" element={<RootRedirect />} />
             </Routes>

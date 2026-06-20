@@ -18,6 +18,7 @@ export default function Products() {
   
   // Forms & CRUD States
   const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     type: "FinishedGood",
@@ -30,6 +31,8 @@ export default function Products() {
     bom_id: ""
   });
   const [stockAdjustVal, setStockAdjustVal] = useState(0);
+  const [recipeMode, setRecipeMode] = useState("existing"); // "existing" or "inline"
+  const [recipeLines, setRecipeLines] = useState([{ component_product_id: "", quantity_required: 1 }]);
 
   // Fetching Data with React Query
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
@@ -42,9 +45,9 @@ export default function Products() {
     queryFn: () => api.get('/vendors/')
   });
 
-  const { data: boms = [] } = useQuery({
-    queryKey: ['boms'],
-    queryFn: () => api.get('/boms/')
+  const { data: recipes = [] } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: () => api.get('/recipes/')
   });
 
   const { data: salesOrders = [] } = useQuery({
@@ -115,6 +118,8 @@ export default function Products() {
     setStockAdjustVal(product.on_hand_qty);
     setActiveTab("general");
     setIsCreating(false);
+    setRecipeMode("existing");
+    setRecipeLines([{ component_product_id: "", quantity_required: 1 }]);
     setIsSlideOverOpen(true);
   };
 
@@ -131,12 +136,14 @@ export default function Products() {
       procure_on_demand: true,
       procurement_type: "Purchase",
       vendor_id: vendors[0]?.id || "",
-      bom_id: boms[0]?.id || ""
+      bom_id: recipes[0]?.id || ""
     });
+    setRecipeMode("existing");
+    setRecipeLines([{ component_product_id: "", quantity_required: 1 }]);
     setIsSlideOverOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!canModify) return;
 
@@ -145,24 +152,66 @@ export default function Products() {
         alert("Vendor is required for Purchase procurement type");
         return;
       }
-      if (formData.procurement_type === "Manufacturing" && !formData.bom_id) {
-        alert("BoM is required for Manufacturing procurement type");
+      if (formData.procurement_type === "Manufacturing" && recipeMode === "existing" && !formData.bom_id) {
+        alert("Recipe is required for Manufacturing procurement type");
         return;
       }
 
-      // Convert empties to null for backend
+      if (formData.procurement_type === "Manufacturing" && recipeMode === "inline") {
+        if (recipeLines.length === 0 || recipeLines.some(l => !l.component_product_id || l.quantity_required <= 0)) {
+          alert("Please fill all recipe lines with valid components and quantities.");
+          return;
+        }
+      }
+
       const payload = {
         ...formData,
         vendor_id: formData.vendor_id || null,
         bom_id: formData.bom_id || null,
       };
 
-      if (isCreating) {
-        createProductMutation.mutate(payload);
+      if (formData.procurement_type === "Manufacturing" && recipeMode === "inline") {
+        setIsSaving(true);
+        // 1. Create/Update product without procurement type to avoid BoM requirement
+        const prodPayload = { ...payload, procurement_type: null, bom_id: null };
+        let prodId = selectedProduct?.id;
+        let newProd = null;
+        
+        if (isCreating) {
+          newProd = await api.post('/products/', prodPayload);
+          prodId = newProd.id;
+        } else {
+          newProd = await api.put(`/products/${prodId}`, prodPayload);
+        }
+
+        // 2. Create Recipe
+        const recipePayload = {
+          product_id: prodId,
+          name: `${formData.name} Recipe`,
+          version: "1.0",
+          lines: recipeLines.map(l => ({
+            component_product_id: l.component_product_id,
+            quantity_required: Number(l.quantity_required)
+          }))
+        };
+        const newRecipe = await api.post('/recipes/', recipePayload);
+
+        // 3. Update product with procurement_type and bom_id
+        await api.put(`/products/${prodId}`, { ...payload, procurement_type: "Manufacturing", bom_id: newRecipe.id });
+        
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+        queryClient.invalidateQueries({ queryKey: ['recipes'] });
+        setIsSaving(false);
+        setIsSlideOverOpen(false);
       } else {
-        updateProductMutation.mutate({ id: selectedProduct.id, data: payload });
+        if (isCreating) {
+          createProductMutation.mutate(payload);
+        } else {
+          updateProductMutation.mutate({ id: selectedProduct.id, data: payload });
+        }
       }
     } catch (err) {
+      setIsSaving(false);
       alert(err.message);
     }
   };
@@ -607,19 +656,105 @@ export default function Products() {
 
                   {/* Procurement BoM (Build) */}
                   {formData.procurement_type === "Manufacturing" && (
-                    <div className="flex flex-col space-y-1.5">
-                      <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Associated Bill of Materials (BoM)</label>
-                      <select
-                        disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
-                        value={formData.bom_id}
-                        onChange={(e) => setFormData({ ...formData, bom_id: e.target.value })}
-                        required={formData.procurement_type === "Manufacturing"}
-                      >
-                        <option value="">Select Recipe...</option>
-                        {boms.map(b => (
-                          <option key={b.id} value={b.id}>{b.name} ({b.version})</option>
-                        ))}
-                      </select>
+                    <div className="flex flex-col space-y-3 border border-border bg-background p-3 rounded-custom">
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Recipe Configuration</label>
+                        <div className="grid grid-cols-2 bg-card border border-border p-1 rounded-custom">
+                          <button
+                            type="button"
+                            onClick={() => setRecipeMode("existing")}
+                            className={`py-1.5 text-xs font-semibold rounded transition-all duration-150 ${
+                              recipeMode === "existing"
+                                ? 'bg-accent text-background'
+                                : 'text-textSecondary hover:text-textPrimary'
+                            }`}
+                          >
+                            Select Existing BoM
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRecipeMode("inline")}
+                            className={`py-1.5 text-xs font-semibold rounded transition-all duration-150 ${
+                              recipeMode === "inline"
+                                ? 'bg-accent text-background'
+                                : 'text-textSecondary hover:text-textPrimary'
+                            }`}
+                          >
+                            Create Recipe Inline
+                          </button>
+                        </div>
+                      </div>
+
+                      {recipeMode === "existing" ? (
+                        <div className="flex flex-col space-y-1.5">
+                          <select
+                            disabled={!canModify || isSaving}
+                            value={formData.bom_id}
+                            onChange={(e) => setFormData({ ...formData, bom_id: e.target.value })}
+                            required={formData.procurement_type === "Manufacturing" && recipeMode === "existing"}
+                          >
+                            <option value="">Select Recipe...</option>
+                            {recipes.map(b => (
+                              <option key={b.id} value={b.id}>{b.name} ({b.version})</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col space-y-3">
+                          <div className="bg-card/50 rounded p-2 space-y-2 border border-border">
+                            {recipeLines.map((line, idx) => (
+                              <div key={idx} className="flex items-center space-x-2">
+                                <select
+                                  value={line.component_product_id}
+                                  onChange={(e) => {
+                                    const newLines = [...recipeLines];
+                                    newLines[idx].component_product_id = e.target.value;
+                                    setRecipeLines(newLines);
+                                  }}
+                                  className="flex-1 text-xs"
+                                  required
+                                >
+                                  <option value="">Select Raw Material...</option>
+                                  {products.filter(p => p.type === "Component").map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={line.quantity_required}
+                                  onChange={(e) => {
+                                    const newLines = [...recipeLines];
+                                    newLines[idx].quantity_required = e.target.value;
+                                    setRecipeLines(newLines);
+                                  }}
+                                  className="w-20 text-xs font-mono"
+                                  placeholder="Qty"
+                                  required
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newLines = recipeLines.filter((_, i) => i !== idx);
+                                    setRecipeLines(newLines.length ? newLines : [{ component_product_id: "", quantity_required: 1 }]);
+                                  }}
+                                  className="p-1.5 text-statusRed hover:bg-statusRed/10 rounded transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setRecipeLines([...recipeLines, { component_product_id: "", quantity_required: 1 }])}
+                              className="text-xs text-accent font-semibold hover:underline flex items-center mt-2"
+                            >
+                              <Plus size={12} className="mr-1" /> Add Component
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
