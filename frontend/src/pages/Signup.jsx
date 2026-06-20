@@ -36,8 +36,8 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
 
     if (!password) {
       newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
 
     if (password !== confirmPassword) {
@@ -45,7 +45,11 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
     }
 
     if (role === 'Customer') {
-      if (!phone) newErrors.phone = 'Phone number is required';
+      if (!phone) {
+        newErrors.phone = 'Phone number is required';
+      } else if (!/^\d{10}$/.test(phone)) {
+        newErrors.phone = 'Phone number must be exactly 10 digits';
+      }
       if (!address) newErrors.address = 'Delivery address is required';
     }
 
@@ -279,10 +283,13 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                   <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Phone Number</label>
                   <input
                     type="tel"
-                    placeholder="e.g. 555-0100"
+                    placeholder="e.g. 1234567890"
                     disabled={isLoading}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setPhone(val);
+                    }}
                     className={`w-full bg-card border text-xs py-2 ${
                       errors.phone ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
                     }`}
