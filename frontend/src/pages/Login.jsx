@@ -32,43 +32,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
     }
   }, []);
 
-  // Demo access configurations
-  const demoAccounts = {
-    Admin: { email: 'admin@shivfurniture.com', password: 'adminpassword', role: 'StoreAdmin' },
-    Sales: { email: 'sales@shivfurniture.com', password: 'salespassword', role: 'SalesUser' },
-    Purchase: { email: 'purchase@shivfurniture.com', password: 'purchasepassword', role: 'PurchaseUser' },
-    Manufacturing: { email: 'mfg@shivfurniture.com', password: 'mfgpassword', role: 'ManufacturingUser' },
-    Inventory: { email: 'inventory@shivfurniture.com', password: 'inventorypassword', role: 'InventoryManager' },
-    Customer: { email: 'customer@shivfurniture.com', password: 'customerpassword', role: 'Customer' }
-  };
 
-  const handleDemoClick = async (roleKey) => {
-    if (isLoading) return;
-    const account = demoAccounts[roleKey];
-    if (!account) return;
-
-    setErrors({ email: '', password: '', general: '' });
-    setEmail(account.email);
-    setPassword(account.password);
-
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.append('username', account.email);
-      params.append('password', account.password);
-      
-      const res = await api.post('/auth/login', params);
-      localStorage.setItem('access_token', res.access_token);
-      onLogin(account.role);
-    } catch (err) {
-      setErrors(prev => ({
-        ...prev,
-        general: 'Demo login failed: ' + err.message
-      }));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -114,10 +78,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
       let role = decoded.role;
       
       if (!role) {
-        const foundDemo = Object.values(demoAccounts).find(
-          acc => acc.email.toLowerCase() === email.toLowerCase()
-        );
-        role = foundDemo ? foundDemo.role : 'StoreAdmin';
+        role = 'StoreAdmin';
       }
       
       onLogin(role);
@@ -236,7 +197,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
               type="button"
               tabIndex="-1"
               disabled={isLoading}
-              onClick={() => alert("Credentials: Use the 'Demo Access' quick login chips below.")}
+              onClick={() => alert("Please contact your administrator to reset your password.")}
               className="text-textSecondary hover:text-textPrimary font-medium transition-colors duration-150"
             >
               Forgot password?
@@ -272,39 +233,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
           </div>
         </form>
 
-        {/* Divider */}
-        <div className="relative py-2 flex items-center justify-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <span className="relative bg-card px-3 text-[10px] font-bold text-textSecondary uppercase tracking-widest">
-            or continue as
-          </span>
-        </div>
 
-        {/* Demo Roles Chips Panel */}
-        <div className="space-y-2">
-          <div className="flex flex-col text-center">
-            <span className="text-[10px] text-textSecondary font-bold uppercase tracking-wider">Demo Access</span>
-            <span className="text-[9px] text-textMuted font-mono">Bypasses credentials validation for testing</span>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-            {Object.keys(demoAccounts)
-              .filter(roleKey => roleKey === 'Admin' || roleKey === 'Customer')
-              .map(roleKey => (
-                <button
-                  key={roleKey}
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => handleDemoClick(roleKey)}
-                  className="bg-card hover:bg-elevated/60 text-textSecondary hover:text-textPrimary border border-border hover:border-textSecondary rounded-full px-2.5 py-1 text-[10px] font-mono transition-all duration-150 shrink-0"
-                >
-                  {roleKey}
-                </button>
-              ))}
-          </div>
-        </div>
       </div>
 
       {/* Footer */}
