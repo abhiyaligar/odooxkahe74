@@ -52,8 +52,8 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
     if (!password) {
       newErrors.password = 'Password is required';
       hasErrors = true;
-    } else if (password.length < 4) {
-      newErrors.password = 'Password must be at least 4 characters';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
       hasErrors = true;
     }
 
