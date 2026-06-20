@@ -68,6 +68,25 @@ def override_db_dependency(db_session: AsyncSession):
     yield
     app.dependency_overrides.pop(get_db, None)
 
+from app.api.dependencies import get_current_user
+from app.models.pg_models import User, UserRole
+import uuid
+
+@pytest.fixture(autouse=True)
+def override_auth_dependency():
+    """Overrides the get_current_user dependency with a mock SuperAdmin."""
+    async def _get_mock_user():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Admin",
+            email="mockadmin@example.com",
+            role=UserRole.SuperAdmin,
+            is_active=True
+        )
+    app.dependency_overrides[get_current_user] = _get_mock_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
     """Provides an HTTPX AsyncClient bound to the FastAPI application."""

@@ -32,5 +32,7 @@ class SalesOrderResponse(SalesOrderBase):
     created_at: datetime
     confirmed_at: Optional[datetime] = None
     delivered_at: Optional[datetime] = None
+    lines: List[SalesOrderLineResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
+

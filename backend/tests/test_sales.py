@@ -170,3 +170,33 @@ async def test_deliver_order_not_confirmed_error(client: AsyncClient, sample_cus
     deliver_res = await client.post(f"/api/v1/sales-orders/{order_id}/deliver")
     assert deliver_res.status_code == 400
     assert deliver_res.json()["detail"] == "Only Confirmed orders can be delivered"
+
+async def test_create_order_non_existent_product_error(client: AsyncClient, sample_customer: Customer):
+    # Try to create a sales order with a random (non-existent) product ID
+    random_product_id = str(uuid.uuid4())
+    order_data = {
+        "customer_id": str(sample_customer.id),
+        "lines": [{"product_id": random_product_id, "quantity_ordered": 1.0}]
+    }
+    response = await client.post("/api/v1/sales-orders/", json=order_data)
+    assert response.status_code == 400
+    assert "not found" in response.json()["detail"]
+
+async def test_deliver_order_insufficient_stock_error(client: AsyncClient, sample_customer: Customer, sample_product: Product):
+    # 1. Create order asking for 50.0 units when on_hand_qty is 20.0
+    order_data = {
+        "customer_id": str(sample_customer.id),
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 50.0}]
+    }
+    create_res = await client.post("/api/v1/sales-orders/", json=order_data)
+    order_id = create_res.json()["id"]
+
+    # 2. Confirm order (this is allowed, reserves stock)
+    confirm_res = await client.post(f"/api/v1/sales-orders/{order_id}/confirm")
+    assert confirm_res.status_code == 200
+
+    # 3. Try to deliver (should fail due to insufficient on_hand stock)
+    deliver_res = await client.post(f"/api/v1/sales-orders/{order_id}/deliver")
+    assert deliver_res.status_code == 400
+    assert "Insufficient stock" in deliver_res.json()["detail"]
+

@@ -7,8 +7,9 @@ from uuid import UUID
 from app.db.session import get_db
 from app.models.pg_models import Customer
 from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse
+from app.api.dependencies import get_current_user
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 @router.post("/", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
 async def create_customer(customer_in: CustomerCreate, db: AsyncSession = Depends(get_db)):
@@ -21,6 +22,26 @@ async def create_customer(customer_in: CustomerCreate, db: AsyncSession = Depend
 @router.get("/", response_model=List[CustomerResponse])
 async def list_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Customer).offset(skip).limit(limit))
+    return result.scalars().all()
+
+@router.get("/retail", response_model=List[CustomerResponse], tags=["Customers - Retail"])
+async def list_retail_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Customer)
+        .where(Customer.category == "Retail")
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+@router.get("/wholesale", response_model=List[CustomerResponse], tags=["Customers - Wholesale / Corporate"])
+async def list_wholesale_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Customer)
+        .where(Customer.category.in_(["Wholesale", "Corporate", "Distributor"]))
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 @router.get("/{customer_id}", response_model=CustomerResponse)

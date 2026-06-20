@@ -7,7 +7,7 @@ from app.models.pg_models import VendorCategory, PaymentTerms
 class VendorBase(BaseModel):
     name: str
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
+    phone: Optional[str] = None 
     category: VendorCategory = VendorCategory.RawMaterials
     payment_terms: PaymentTerms = PaymentTerms.PrePaid
 

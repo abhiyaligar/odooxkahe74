@@ -4,6 +4,7 @@ from sqlalchemy import Column, String, Boolean, DateTime, Enum, Float, ForeignKe
 from sqlalchemy.dialects.postgresql import UUID
 import enum
 from app.db.base import Base
+from sqlalchemy.orm import relationship
 
 class UserRole(str, enum.Enum):
     SuperAdmin = "SuperAdmin"
@@ -141,6 +142,8 @@ class SalesOrder(Base):
     confirmed_at = Column(DateTime, nullable=True)
     delivered_at = Column(DateTime, nullable=True)
 
+    lines = relationship("SalesOrderLine", back_populates="sales_order", cascade="all, delete-orphan")
+
 class SalesOrderLine(Base):
     __tablename__ = "sales_order_lines"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
@@ -149,6 +152,9 @@ class SalesOrderLine(Base):
     quantity_ordered = Column(Float, nullable=False)
     quantity_delivered = Column(Float, default=0.0)
     unit_price = Column(Float, nullable=False)
+
+    sales_order = relationship("SalesOrder", back_populates="lines")
+
 
 class PurchaseOrderStatus(str, enum.Enum):
     Draft = "Draft"

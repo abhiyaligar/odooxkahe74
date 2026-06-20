@@ -18,5 +18,3 @@ app.include_router(customers_router, prefix="/api/v1/customers", tags=["customer
 def read_root():
     return {"message": f"Welcome to {settings.PROJECT_NAME}"}
 
-from app.api import endpoints
-app.include_router(endpoints.router, prefix="/api")

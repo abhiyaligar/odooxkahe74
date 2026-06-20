@@ -212,3 +212,56 @@ async def test_delete_customer_success(client: AsyncClient, db_session: AsyncSes
     # Verify lookups fail
     check_res = await client.get(f"/api/v1/customers/{customer.id}")
     assert check_res.status_code == 404
+
+async def test_list_raw_material_vendors(client: AsyncClient, db_session: AsyncSession):
+    v1 = Vendor(name="Supplier RM", category=VendorCategory.RawMaterials)
+    v2 = Vendor(name="Supplier SRV", category=VendorCategory.Services)
+    db_session.add_all([v1, v2])
+    await db_session.commit()
+
+    response = await client.get("/api/v1/vendors/raw-materials")
+    assert response.status_code == 200
+    res_json = response.json()
+    names = [v["name"] for v in res_json]
+    assert "Supplier RM" in names
+    assert "Supplier SRV" not in names
+
+async def test_list_service_vendors(client: AsyncClient, db_session: AsyncSession):
+    v1 = Vendor(name="Supplier RM 2", category=VendorCategory.RawMaterials)
+    v2 = Vendor(name="Supplier SRV 2", category=VendorCategory.Services)
+    db_session.add_all([v1, v2])
+    await db_session.commit()
+
+    response = await client.get("/api/v1/vendors/services")
+    assert response.status_code == 200
+    res_json = response.json()
+    names = [v["name"] for v in res_json]
+    assert "Supplier SRV 2" in names
+    assert "Supplier RM 2" not in names
+
+async def test_list_retail_customers(client: AsyncClient, db_session: AsyncSession):
+    c1 = Customer(name="Retail Customer", category=CustomerCategory.Retail)
+    c2 = Customer(name="Wholesale Customer", category=CustomerCategory.Wholesale)
+    db_session.add_all([c1, c2])
+    await db_session.commit()
+
+    response = await client.get("/api/v1/customers/retail")
+    assert response.status_code == 200
+    res_json = response.json()
+    names = [c["name"] for c in res_json]
+    assert "Retail Customer" in names
+    assert "Wholesale Customer" not in names
+
+async def test_list_wholesale_customers(client: AsyncClient, db_session: AsyncSession):
+    c1 = Customer(name="Retail Customer 2", category=CustomerCategory.Retail)
+    c2 = Customer(name="Wholesale Customer 2", category=CustomerCategory.Wholesale)
+    db_session.add_all([c1, c2])
+    await db_session.commit()
+
+    response = await client.get("/api/v1/customers/wholesale")
+    assert response.status_code == 200
+    res_json = response.json()
+    names = [c["name"] for c in res_json]
+    assert "Wholesale Customer 2" in names
+    assert "Retail Customer 2" not in names
+

@@ -7,8 +7,9 @@ from uuid import UUID
 from app.db.session import get_db
 from app.models.pg_models import Vendor
 from app.schemas.vendor import VendorCreate, VendorUpdate, VendorResponse
+from app.api.dependencies import get_current_user
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 @router.post("/", response_model=VendorResponse, status_code=status.HTTP_201_CREATED)
 async def create_vendor(vendor_in: VendorCreate, db: AsyncSession = Depends(get_db)):
@@ -21,6 +22,26 @@ async def create_vendor(vendor_in: VendorCreate, db: AsyncSession = Depends(get_
 @router.get("/", response_model=List[VendorResponse])
 async def list_vendors(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Vendor).offset(skip).limit(limit))
+    return result.scalars().all()
+
+@router.get("/raw-materials", response_model=List[VendorResponse], tags=["Vendors - Raw Materials / Finished Goods"])
+async def list_raw_material_vendors(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Vendor)
+        .where(Vendor.category.in_(["RawMaterials", "FinishedGoods"]))
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+@router.get("/services", response_model=List[VendorResponse], tags=["Vendors - Services / Logistics"])
+async def list_service_vendors(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Vendor)
+        .where(Vendor.category.in_(["Logistics", "Services"]))
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 @router.get("/{vendor_id}", response_model=VendorResponse)

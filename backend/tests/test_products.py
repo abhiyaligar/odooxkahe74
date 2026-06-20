@@ -188,3 +188,34 @@ async def test_delete_product(client: AsyncClient, db_session: AsyncSession):
     # Check it no longer exists
     get_res = await client.get(f"/api/v1/products/{product.id}")
     assert get_res.status_code == 404
+
+async def test_list_finished_goods(client: AsyncClient, db_session: AsyncSession):
+    # Setup: Create one FinishedGood and one Component
+    fg = Product(name="FG item", type=ProductType.FinishedGood, procurement_strategy=ProcurementStrategy.MTS)
+    comp = Product(name="Component item", type=ProductType.Component, procurement_strategy=ProcurementStrategy.MTS)
+    db_session.add_all([fg, comp])
+    await db_session.commit()
+
+    # Call /finished-goods
+    response = await client.get("/api/v1/products/finished-goods")
+    assert response.status_code == 200
+    res_json = response.json()
+    names = [p["name"] for p in res_json]
+    assert "FG item" in names
+    assert "Component item" not in names
+
+async def test_list_components(client: AsyncClient, db_session: AsyncSession):
+    # Setup: Create one FinishedGood and one Component
+    fg = Product(name="FG item 2", type=ProductType.FinishedGood, procurement_strategy=ProcurementStrategy.MTS)
+    comp = Product(name="Component item 2", type=ProductType.Component, procurement_strategy=ProcurementStrategy.MTS)
+    db_session.add_all([fg, comp])
+    await db_session.commit()
+
+    # Call /components
+    response = await client.get("/api/v1/products/components")
+    assert response.status_code == 200
+    res_json = response.json()
+    names = [p["name"] for p in res_json]
+    assert "Component item 2" in names
+    assert "FG item 2" not in names
+
