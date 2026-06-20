@@ -5,13 +5,23 @@ from typing import List
 from uuid import UUID
 
 from app.db.session import get_db
-from app.models.pg_models import Vendor
+from app.models.pg_models import Vendor, UserRole
 from app.schemas.vendor import VendorCreate, VendorUpdate, VendorResponse
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, RoleChecker
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
-@router.post("/", response_model=VendorResponse, status_code=status.HTTP_201_CREATED)
+admin_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin])
+edit_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin, UserRole.PurchaseUser])
+read_checker = RoleChecker([
+    UserRole.SuperAdmin,
+    UserRole.StoreAdmin,
+    UserRole.PurchaseUser,
+    UserRole.InventoryManager,
+    UserRole.BusinessOwner
+])
+
+@router.post("/", response_model=VendorResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_checker)])
 async def create_vendor(vendor_in: VendorCreate, db: AsyncSession = Depends(get_db)):
     db_vendor = Vendor(**vendor_in.model_dump())
     db.add(db_vendor)
@@ -19,12 +29,12 @@ async def create_vendor(vendor_in: VendorCreate, db: AsyncSession = Depends(get_
     await db.refresh(db_vendor)
     return db_vendor
 
-@router.get("/", response_model=List[VendorResponse])
+@router.get("/", response_model=List[VendorResponse], dependencies=[Depends(read_checker)])
 async def list_vendors(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Vendor).offset(skip).limit(limit))
     return result.scalars().all()
 
-@router.get("/raw-materials", response_model=List[VendorResponse], tags=["Vendors - Raw Materials / Finished Goods"])
+@router.get("/raw-materials", response_model=List[VendorResponse], tags=["Vendors - Raw Materials / Finished Goods"], dependencies=[Depends(read_checker)])
 async def list_raw_material_vendors(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Vendor)
@@ -34,7 +44,7 @@ async def list_raw_material_vendors(skip: int = 0, limit: int = 100, db: AsyncSe
     )
     return result.scalars().all()
 
-@router.get("/services", response_model=List[VendorResponse], tags=["Vendors - Services / Logistics"])
+@router.get("/services", response_model=List[VendorResponse], tags=["Vendors - Services / Logistics"], dependencies=[Depends(read_checker)])
 async def list_service_vendors(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Vendor)
@@ -44,7 +54,7 @@ async def list_service_vendors(skip: int = 0, limit: int = 100, db: AsyncSession
     )
     return result.scalars().all()
 
-@router.get("/{vendor_id}", response_model=VendorResponse)
+@router.get("/{vendor_id}", response_model=VendorResponse, dependencies=[Depends(read_checker)])
 async def get_vendor(vendor_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
     vendor = result.scalars().first()
@@ -52,7 +62,7 @@ async def get_vendor(vendor_id: UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Vendor not found")
     return vendor
 
-@router.put("/{vendor_id}", response_model=VendorResponse)
+@router.put("/{vendor_id}", response_model=VendorResponse, dependencies=[Depends(edit_checker)])
 async def update_vendor(vendor_id: UUID, vendor_in: VendorUpdate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
     db_vendor = result.scalars().first()
@@ -67,7 +77,7 @@ async def update_vendor(vendor_id: UUID, vendor_in: VendorUpdate, db: AsyncSessi
     await db.refresh(db_vendor)
     return db_vendor
 
-@router.delete("/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{vendor_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(admin_checker)])
 async def delete_vendor(vendor_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
     vendor = result.scalars().first()

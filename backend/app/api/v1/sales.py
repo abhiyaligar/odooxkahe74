@@ -8,16 +8,26 @@ import uuid
 from datetime import datetime
 
 from app.db.session import get_db
-from app.models.pg_models import SalesOrder, SalesOrderLine, Product, StockLedgerEntry, LedgerReason, ReferenceType, SalesOrderStatus, User
+from app.models.pg_models import SalesOrder, SalesOrderLine, Product, StockLedgerEntry, LedgerReason, ReferenceType, SalesOrderStatus, User, UserRole
 from app.schemas.sales import SalesOrderCreate, SalesOrderResponse
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, RoleChecker
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
-@router.post("/", response_model=SalesOrderResponse, status_code=status.HTTP_201_CREATED)
+write_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin, UserRole.SalesUser])
+read_checker = RoleChecker([
+    UserRole.SuperAdmin,
+    UserRole.StoreAdmin,
+    UserRole.SalesUser,
+    UserRole.PurchaseUser,
+    UserRole.InventoryManager,
+    UserRole.BusinessOwner
+])
+
+@router.post("/", response_model=SalesOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(write_checker)])
 async def create_sales_order(
     order_in: SalesOrderCreate, 
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(write_checker),
     db: AsyncSession = Depends(get_db)
 ):
     # Generate unique order number
@@ -65,7 +75,7 @@ async def create_sales_order(
     db_order = res_result.scalars().first()
     return db_order
 
-@router.get("/", response_model=List[SalesOrderResponse])
+@router.get("/", response_model=List[SalesOrderResponse], dependencies=[Depends(read_checker)])
 async def list_sales_orders(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(SalesOrder)
@@ -75,7 +85,7 @@ async def list_sales_orders(skip: int = 0, limit: int = 100, db: AsyncSession = 
     )
     return result.scalars().all()
 
-@router.post("/{order_id}/confirm")
+@router.post("/{order_id}/confirm", dependencies=[Depends(write_checker)])
 async def confirm_sales_order(order_id: UUID, db: AsyncSession = Depends(get_db)):
     # 1. Fetch order
     result = await db.execute(select(SalesOrder).where(SalesOrder.id == order_id))
@@ -108,7 +118,7 @@ async def confirm_sales_order(order_id: UUID, db: AsyncSession = Depends(get_db)
     await db.commit()
     return {"message": "Order confirmed and stock reserved."}
 
-@router.post("/{order_id}/deliver")
+@router.post("/{order_id}/deliver", dependencies=[Depends(write_checker)])
 async def deliver_sales_order(order_id: UUID, db: AsyncSession = Depends(get_db)):
     # 1. Fetch order
     result = await db.execute(select(SalesOrder).where(SalesOrder.id == order_id))

@@ -5,13 +5,16 @@ from typing import List
 from uuid import UUID
 
 from app.db.session import get_db
-from app.models.pg_models import Customer
+from app.models.pg_models import Customer, UserRole
 from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, RoleChecker
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
-@router.post("/", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
+admin_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin])
+read_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin, UserRole.SalesUser])
+
+@router.post("/", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_checker)])
 async def create_customer(customer_in: CustomerCreate, db: AsyncSession = Depends(get_db)):
     db_customer = Customer(**customer_in.model_dump())
     db.add(db_customer)
@@ -19,12 +22,12 @@ async def create_customer(customer_in: CustomerCreate, db: AsyncSession = Depend
     await db.refresh(db_customer)
     return db_customer
 
-@router.get("/", response_model=List[CustomerResponse])
+@router.get("/", response_model=List[CustomerResponse], dependencies=[Depends(read_checker)])
 async def list_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Customer).offset(skip).limit(limit))
     return result.scalars().all()
 
-@router.get("/retail", response_model=List[CustomerResponse], tags=["Customers - Retail"])
+@router.get("/retail", response_model=List[CustomerResponse], tags=["Customers - Retail"], dependencies=[Depends(read_checker)])
 async def list_retail_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Customer)
@@ -34,7 +37,7 @@ async def list_retail_customers(skip: int = 0, limit: int = 100, db: AsyncSessio
     )
     return result.scalars().all()
 
-@router.get("/wholesale", response_model=List[CustomerResponse], tags=["Customers - Wholesale / Corporate"])
+@router.get("/wholesale", response_model=List[CustomerResponse], tags=["Customers - Wholesale / Corporate"], dependencies=[Depends(read_checker)])
 async def list_wholesale_customers(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Customer)
@@ -44,7 +47,7 @@ async def list_wholesale_customers(skip: int = 0, limit: int = 100, db: AsyncSes
     )
     return result.scalars().all()
 
-@router.get("/{customer_id}", response_model=CustomerResponse)
+@router.get("/{customer_id}", response_model=CustomerResponse, dependencies=[Depends(read_checker)])
 async def get_customer(customer_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Customer).where(Customer.id == customer_id))
     customer = result.scalars().first()
@@ -52,7 +55,7 @@ async def get_customer(customer_id: UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Customer not found")
     return customer
 
-@router.put("/{customer_id}", response_model=CustomerResponse)
+@router.put("/{customer_id}", response_model=CustomerResponse, dependencies=[Depends(admin_checker)])
 async def update_customer(customer_id: UUID, customer_in: CustomerUpdate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Customer).where(Customer.id == customer_id))
     db_customer = result.scalars().first()
@@ -67,7 +70,7 @@ async def update_customer(customer_id: UUID, customer_in: CustomerUpdate, db: As
     await db.refresh(db_customer)
     return db_customer
 
-@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(admin_checker)])
 async def delete_customer(customer_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Customer).where(Customer.id == customer_id))
     customer = result.scalars().first()

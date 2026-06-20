@@ -5,18 +5,19 @@ from typing import List
 from uuid import UUID
 
 from app.db.session import get_db
-from app.models.pg_models import Product
+from app.models.pg_models import Product, UserRole
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, RoleChecker
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
+admin_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin])
 
 def compute_free_qty(product: Product) -> ProductResponse:
     prod_dict = {c.name: getattr(product, c.name) for c in product.__table__.columns}
     prod_dict["free_to_use_qty"] = prod_dict["on_hand_qty"] - prod_dict["reserved_qty"]
     return ProductResponse(**prod_dict)
 
-@router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_checker)])
 async def create_product(product_in: ProductCreate, db: AsyncSession = Depends(get_db)):
     if product_in.procurement_type == "Purchase" and not product_in.vendor_id:
         raise HTTPException(status_code=400, detail="Vendor ID is required for Purchase procurement")
@@ -74,7 +75,7 @@ async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
     return compute_free_qty(product)
 
-@router.put("/{product_id}", response_model=ProductResponse)
+@router.put("/{product_id}", response_model=ProductResponse, dependencies=[Depends(admin_checker)])
 async def update_product(product_id: UUID, product_in: ProductUpdate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Product).where(Product.id == product_id))
     db_product = result.scalars().first()
@@ -107,7 +108,7 @@ async def update_product(product_id: UUID, product_in: ProductUpdate, db: AsyncS
     await db.refresh(db_product)
     return compute_free_qty(db_product)
 
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(admin_checker)])
 async def delete_product(product_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalars().first()

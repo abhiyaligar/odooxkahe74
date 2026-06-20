@@ -23,7 +23,8 @@ from app.models.pg_models import (
     StockLedgerEntry,
     LedgerReason,
     ReferenceType,
-    User
+    User,
+    UserRole
 )
 from app.schemas.manufacturing import (
     MOCreate,
@@ -33,9 +34,19 @@ from app.schemas.manufacturing import (
     WorkOrderUpdate,
     WorkOrderResponse
 )
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, RoleChecker
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
+
+mfg_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin, UserRole.ManufacturingUser])
+read_checker = RoleChecker([
+    UserRole.SuperAdmin,
+    UserRole.StoreAdmin,
+    UserRole.ManufacturingUser,
+    UserRole.PurchaseUser,
+    UserRole.InventoryManager,
+    UserRole.BusinessOwner
+])
 
 # Helper: Get MO or raise 404
 async def get_mo_or_raise(mo_id: UUID, db: AsyncSession) -> ManufacturingOrder:
@@ -49,7 +60,7 @@ async def get_mo_or_raise(mo_id: UUID, db: AsyncSession) -> ManufacturingOrder:
     await db.refresh(mo, ["work_orders"])
     return mo
 
-@router.post("/", response_model=MOResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=MOResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(mfg_checker)])
 async def create_manufacturing_order(mo_in: MOCreate, db: AsyncSession = Depends(get_db)):
     # 1. Verify parent product exists & is FinishedGood
     prod_res = await db.execute(select(Product).where(Product.id == mo_in.product_id))
@@ -113,7 +124,7 @@ async def create_manufacturing_order(mo_in: MOCreate, db: AsyncSession = Depends
     # Reload and return
     return await get_mo_or_raise(db_mo.id, db)
 
-@router.get("/", response_model=List[MOResponse])
+@router.get("/", response_model=List[MOResponse], dependencies=[Depends(read_checker)])
 async def list_manufacturing_orders(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(ManufacturingOrder)
@@ -123,11 +134,11 @@ async def list_manufacturing_orders(skip: int = 0, limit: int = 100, db: AsyncSe
     )
     return result.scalars().all()
 
-@router.get("/{mo_id}", response_model=MOResponse)
+@router.get("/{mo_id}", response_model=MOResponse, dependencies=[Depends(read_checker)])
 async def get_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
     return await get_mo_or_raise(mo_id, db)
 
-@router.put("/{mo_id}", response_model=MOResponse)
+@router.put("/{mo_id}", response_model=MOResponse, dependencies=[Depends(mfg_checker)])
 async def update_manufacturing_order(mo_id: UUID, mo_update: MOUpdate, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
@@ -146,7 +157,7 @@ async def update_manufacturing_order(mo_id: UUID, mo_update: MOUpdate, db: Async
     await db.commit()
     return await get_mo_or_raise(db_mo.id, db)
 
-@router.delete("/{mo_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{mo_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(mfg_checker)])
 async def delete_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
@@ -157,7 +168,7 @@ async def delete_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get
 
 # --- Work Order Overrides (Only Draft MO) ---
 
-@router.post("/{mo_id}/work-orders/", response_model=WorkOrderResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/{mo_id}/work-orders/", response_model=WorkOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(mfg_checker)])
 async def create_work_order(mo_id: UUID, wo_in: WorkOrderCreate, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
@@ -175,7 +186,7 @@ async def create_work_order(mo_id: UUID, wo_in: WorkOrderCreate, db: AsyncSessio
     await db.refresh(db_wo)
     return db_wo
 
-@router.put("/{mo_id}/work-orders/{wo_id}", response_model=WorkOrderResponse)
+@router.put("/{mo_id}/work-orders/{wo_id}", response_model=WorkOrderResponse, dependencies=[Depends(mfg_checker)])
 async def update_work_order(mo_id: UUID, wo_id: UUID, wo_update: WorkOrderUpdate, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
@@ -197,7 +208,7 @@ async def update_work_order(mo_id: UUID, wo_id: UUID, wo_update: WorkOrderUpdate
     await db.refresh(db_wo)
     return db_wo
 
-@router.delete("/{mo_id}/work-orders/{wo_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{mo_id}/work-orders/{wo_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(mfg_checker)])
 async def delete_work_order(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
@@ -214,7 +225,7 @@ async def delete_work_order(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends
 
 # --- State Transitions ---
 
-@router.post("/{mo_id}/confirm")
+@router.post("/{mo_id}/confirm", dependencies=[Depends(mfg_checker)])
 async def confirm_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
@@ -259,7 +270,7 @@ async def confirm_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(ge
     return {"message": "Order confirmed and materials reserved successfully."}
 
 
-@router.post("/{mo_id}/start")
+@router.post("/{mo_id}/start", dependencies=[Depends(mfg_checker)])
 async def start_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Confirmed:
@@ -270,7 +281,7 @@ async def start_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_
     await db.commit()
     return {"message": "Manufacturing started."}
 
-@router.post("/{mo_id}/work-orders/{wo_id}/start")
+@router.post("/{mo_id}/work-orders/{wo_id}/start", dependencies=[Depends(mfg_checker)])
 async def start_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.InProgress:
@@ -303,7 +314,7 @@ async def start_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSession =
     await db.commit()
     return {"message": "Work Center operation started."}
 
-@router.post("/{mo_id}/work-orders/{wo_id}/complete")
+@router.post("/{mo_id}/work-orders/{wo_id}/complete", dependencies=[Depends(mfg_checker)])
 async def complete_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.InProgress:
@@ -321,7 +332,7 @@ async def complete_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSessio
     await db.commit()
     return {"message": "Work Center operation completed."}
 
-@router.post("/{mo_id}/complete")
+@router.post("/{mo_id}/complete", dependencies=[Depends(mfg_checker)])
 async def complete_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.InProgress:
@@ -385,7 +396,7 @@ async def complete_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(g
     await db.commit()
     return {"message": "Manufacturing Order completed. Stock quantities and ledgers updated."}
 
-@router.post("/{mo_id}/cancel")
+@router.post("/{mo_id}/cancel", dependencies=[Depends(mfg_checker)])
 async def cancel_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status in [ManufacturingOrderStatus.Completed, ManufacturingOrderStatus.Cancelled]:

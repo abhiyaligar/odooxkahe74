@@ -6,11 +6,19 @@ from typing import List
 from uuid import UUID
 
 from app.db.session import get_db
-from app.models.pg_models import BoM, BoMLine, Product, ProductType, ManufacturingOrder, ManufacturingOrderStatus, User
+from app.models.pg_models import BoM, BoMLine, Product, ProductType, ManufacturingOrder, ManufacturingOrderStatus, User, UserRole
 from app.schemas.bom import BoMCreate, BoMUpdate, BoMResponse
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, RoleChecker
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
+
+admin_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin])
+read_checker = RoleChecker([
+    UserRole.SuperAdmin,
+    UserRole.StoreAdmin,
+    UserRole.ManufacturingUser,
+    UserRole.BusinessOwner
+])
 
 async def check_circular_dependency(
     db: AsyncSession, 
@@ -46,7 +54,7 @@ async def check_circular_dependency(
 
     return False
 
-@router.post("/", response_model=BoMResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=BoMResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_checker)])
 async def create_bom(bom_in: BoMCreate, db: AsyncSession = Depends(get_db)):
     # 1. Verify parent product exists
     prod_res = await db.execute(select(Product).where(Product.id == bom_in.product_id))
@@ -115,7 +123,7 @@ async def create_bom(bom_in: BoMCreate, db: AsyncSession = Depends(get_db)):
     )
     return res.scalars().first()
 
-@router.get("/", response_model=List[BoMResponse])
+@router.get("/", response_model=List[BoMResponse], dependencies=[Depends(read_checker)])
 async def list_boms(product_id: UUID | None = None, skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
     query = select(BoM).options(selectinload(BoM.lines))
     if product_id:
@@ -123,7 +131,7 @@ async def list_boms(product_id: UUID | None = None, skip: int = 0, limit: int = 
     result = await db.execute(query.offset(skip).limit(limit))
     return result.scalars().all()
 
-@router.get("/{bom_id}", response_model=BoMResponse)
+@router.get("/{bom_id}", response_model=BoMResponse, dependencies=[Depends(read_checker)])
 async def get_bom(bom_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(BoM).options(selectinload(BoM.lines)).where(BoM.id == bom_id)
@@ -133,7 +141,7 @@ async def get_bom(bom_id: UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="BoM not found")
     return bom
 
-@router.put("/{bom_id}", response_model=BoMResponse)
+@router.put("/{bom_id}", response_model=BoMResponse, dependencies=[Depends(admin_checker)])
 async def update_bom(bom_id: UUID, bom_in: BoMUpdate, db: AsyncSession = Depends(get_db)):
     # 1. Fetch BoM
     result = await db.execute(
@@ -196,7 +204,7 @@ async def update_bom(bom_id: UUID, bom_in: BoMUpdate, db: AsyncSession = Depends
     )
     return res.scalars().first()
 
-@router.delete("/{bom_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{bom_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(admin_checker)])
 async def delete_bom(bom_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(BoM).where(BoM.id == bom_id))
     bom = result.scalars().first()
