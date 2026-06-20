@@ -55,6 +55,16 @@
     @apply bg-card border border-border rounded-custom text-textPrimary px-3 py-1.5 text-sm focus:outline-none focus:border-accent transition-colors duration-150 placeholder:text-textMuted;
   }
 
+  /* Hide spinner arrows for number inputs */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
   /* Thin grayscale custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;

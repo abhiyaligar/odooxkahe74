@@ -191,7 +191,7 @@ export default function Products() {
           version: "1.0",
           lines: recipeLines.map(l => ({
             component_product_id: l.component_product_id,
-            quantity_required: Number(l.quantity_required)
+            quantity_required: Math.max(1, Math.round(Number(l.quantity_required)) || 1)
           }))
         };
         const newRecipe = await api.post('/recipes/', recipePayload);
@@ -469,11 +469,11 @@ export default function Products() {
                   <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Sales Price ($)</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.sales_price}
-                    onChange={(e) => setFormData({ ...formData, sales_price: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, sales_price: Math.max(0, Math.round(Number(e.target.value)) || 0) })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed font-mono"
                   />
                 </div>
@@ -482,11 +482,11 @@ export default function Products() {
                   <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Cost Price ($)</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.cost_price}
-                    onChange={(e) => setFormData({ ...formData, cost_price: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, cost_price: Math.max(0, Math.round(Number(e.target.value)) || 0) })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed font-mono"
                   />
                 </div>
@@ -721,8 +721,8 @@ export default function Products() {
                                 </select>
                                 <input
                                   type="number"
-                                  min="0.01"
-                                  step="0.01"
+                                  min="1"
+                                  step="1"
                                   value={line.quantity_required}
                                   onChange={(e) => {
                                     const newLines = [...recipeLines];

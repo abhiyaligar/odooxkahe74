@@ -118,7 +118,7 @@ export default function Recipes() {
     const updated = [...formComponents];
     updated[idx] = {
       ...updated[idx],
-      [field]: field === "quantity_required" ? Math.max(0.1, Number(val)) : val
+      [field]: field === "quantity_required" ? Math.max(1, Math.round(Number(val)) || 1) : val
     };
     setFormComponents(updated);
   };
@@ -344,8 +344,8 @@ export default function Recipes() {
                     <div className="w-32">
                       <input
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        step="1"
+                        min="1"
                         placeholder="Qty required"
                         value={line.quantity_required}
                         onChange={(e) => handleComponentChange(idx, "quantity_required", e.target.value)}

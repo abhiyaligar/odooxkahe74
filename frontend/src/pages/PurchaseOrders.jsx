@@ -178,7 +178,7 @@ export default function PurchaseOrders() {
 
   const handleLinePriceChange = (idx, cost) => {
     const updated = [...orderLines];
-    updated[idx] = { ...updated[idx], unit_cost: Math.max(0, Number(cost)) };
+    updated[idx] = { ...updated[idx], unit_cost: Math.max(0, Math.round(Number(cost)) || 0) };
     setOrderLines(updated);
   };
 
@@ -438,7 +438,7 @@ export default function PurchaseOrders() {
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         placeholder="Cost ($)"
                         value={line.unit_cost}
                         onChange={(e) => handleLinePriceChange(idx, e.target.value)}

@@ -166,7 +166,7 @@ export default function SalesOrders() {
 
   const handleLinePriceChange = (idx, price) => {
     const updated = [...orderLines];
-    updated[idx] = { ...updated[idx], unit_price: Math.max(0, Number(price)) };
+    updated[idx] = { ...updated[idx], unit_price: Math.max(0, Math.round(Number(price)) || 0) };
     setOrderLines(updated);
   };
 
@@ -472,7 +472,7 @@ export default function SalesOrders() {
                       <input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         placeholder="Price"
                         value={line.unit_price}
                         onChange={(e) => handleLinePriceChange(idx, e.target.value)}
