@@ -1,6 +1,6 @@
 # Frontend Architecture: Shiv Furniture Works Mini ERP
 
-This document outlines the frontend architecture of the **Shiv Furniture Works** Mini ERP and Customer Portal system built for the Odoo-style hackathon.
+This document outlines the frontend architecture of the **Shiv Furniture Works** Mini ERP and Customer Portal system built for the Odoo-style hackathon. For step-by-step setup and launch instructions, please refer to the [root README.md](file:///c:/Users/Asus/Downloads/odooxkahe74/README.md).
 
 ## 1. Technology Stack
 - **Core Library**: React (v18)
