@@ -41,8 +41,10 @@ frontend/
     │   ├── BoM.jsx               # Bill of Materials manager and operations lists
     │   ├── Manufacturing.jsx     # Shop floor tracker and Work Order execution
     │   └── CustomerPortal.jsx    # Client portal: Catalog, Cart, Order History, Tracking
-    └── store/
-        └── erpStore.js           # Zustand store with mock data seed and automation rules
+    ├── store/
+    │   └── erpStore.js           # Zustand store with mock data seed and automation rules
+    └── utils/
+        └── orderStatusBreakdown.js  # Pure aggregation function for the Order Status Breakdown donut chart
 ```
 
 ## 3. Core Business Logic & UI Features
@@ -58,7 +60,7 @@ When a **Sales Order** is confirmed:
 ### B. Dark & Light Mode Theme Support
 - Theme selection is stored in `localStorage` and falls back to system preferences.
 - Defined variables in `index.css` map to Tailwind custom theme configurations so that colors adapt automatically.
-- Recharts graphics in the `Dashboard` dynamically query `document.documentElement` styles to paint theme-correct lines and grid axes.
+- Recharts graphics in the `Dashboard` dynamically query `document.documentElement` styles to paint theme-correct lines, donut slices, and grid axes. The **Order Status Breakdown** donut chart (`src/utils/orderStatusBreakdown.js`) aggregates statuses across all order types (Sales, Purchase, Manufacturing) into four buckets (Draft, In Progress, Completed, Cancelled) and renders a Recharts `PieChart` with `innerRadius` to display a donut with a center total count label and a themed legend.
 
 ### C. Route Guards & Role-Based Access Control (RBAC)
 - Guest routes (`/login`, `/signup`) are guarded to redirect already authenticated users to their home base.

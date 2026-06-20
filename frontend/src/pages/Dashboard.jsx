@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useErpStore } from '../store/erpStore';
 import { useTheme } from '../components/common/ThemeProvider';
+import { getOrderStatusBreakdown } from '../utils/orderStatusBreakdown';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,8 +15,9 @@ import {
   ResponsiveContainer, 
   LineChart, 
   Line, 
-  BarChart, 
-  Bar, 
+  PieChart, 
+  Pie, 
+  Cell, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -90,27 +92,9 @@ export default function Dashboard() {
     { day: "Jun 20", onHand: 242, reserved: 18 } // reflecting initial product states
   ];
 
-  // Order status breakdown data
-  const orderBreakdownData = [
-    {
-      name: "Sales",
-      Draft: salesOrders.filter(o => o.status === "Draft").length,
-      Confirmed: salesOrders.filter(o => o.status === "Confirmed" || o.status === "PartiallyDelivered").length,
-      Completed: salesOrders.filter(o => o.status === "FullyDelivered").length,
-    },
-    {
-      name: "Purchases",
-      Draft: purchaseOrders.filter(o => o.status === "Draft").length,
-      Confirmed: purchaseOrders.filter(o => o.status === "Confirmed" || o.status === "PartiallyReceived").length,
-      Completed: purchaseOrders.filter(o => o.status === "FullyReceived").length,
-    },
-    {
-      name: "Mfg Orders",
-      Draft: manufacturingOrders.filter(o => o.status === "Draft").length,
-      Confirmed: manufacturingOrders.filter(o => o.status === "InProgress").length,
-      Completed: manufacturingOrders.filter(o => o.status === "Completed").length,
-    }
-  ];
+  // Order status breakdown (donut chart data)
+  const donutData = getOrderStatusBreakdown({ salesOrders, purchaseOrders, manufacturingOrders });
+  const totalOrders = donutData.reduce((sum, d) => sum + d.value, 0);
 
   // 3. Dynamic Alerts List (derived from active state)
   const alerts = [];
@@ -289,29 +273,72 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Bar Chart */}
+        {/* Order Status Breakdown Donut Chart */}
         <div className="bg-card border border-border rounded-custom p-5">
           <div className="mb-4">
-            <h3 className="text-sm font-semibold tracking-tight">ERP Cycles Status</h3>
-            <p className="text-[11px] text-textSecondary">Active records counts categorized by workflow stages</p>
+            <h3 className="text-sm font-semibold tracking-tight">Order Status Breakdown</h3>
+            <p className="text-[11px] text-textSecondary">Live distribution across Sales, Purchase, and Manufacturing orders</p>
           </div>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={orderBreakdownData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.border} vertical={false} />
-                <XAxis dataKey="name" stroke={chartColors.disabled} fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke={chartColors.disabled} fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: chartColors.elevated, border: `1px solid ${chartColors.border}`, borderRadius: "6px" }}
-                  labelStyle={{ color: chartColors.foreground, fontSize: "11px", fontWeight: "bold" }}
-                  itemStyle={{ color: chartColors.mutedForeground, fontSize: "11px" }}
-                />
-                <Bar dataKey="Draft" fill={chartColors.disabled} radius={[2, 2, 0, 0]} name="Draft" />
-                <Bar dataKey="Confirmed" fill={chartColors.mutedForeground} radius={[2, 2, 0, 0]} name="Confirmed/In-Progress" />
-                <Bar dataKey="Completed" fill={chartColors.foreground} radius={[2, 2, 0, 0]} name="Completed" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {totalOrders === 0 ? (
+            <div className="h-64 w-full flex items-center justify-center">
+              <p className="text-xs text-textMuted text-center max-w-xs leading-relaxed">
+                No orders yet — create a Sales, Purchase, or Manufacturing order to see status distribution here.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+              {/* Donut */}
+              <div className="relative h-56 w-56 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={donutData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={85}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {donutData.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ backgroundColor: chartColors.elevated, border: `1px solid ${chartColors.border}`, borderRadius: "6px" }}
+                      labelStyle={{ color: chartColors.foreground, fontSize: "11px", fontWeight: "bold" }}
+                      itemStyle={{ color: chartColors.mutedForeground, fontSize: "11px" }}
+                      formatter={(value, name) => [`${value} order${value !== 1 ? 's' : ''}`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center label */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-bold tracking-tight text-textPrimary">{totalOrders}</span>
+                  <span className="text-[10px] text-textMuted font-medium uppercase tracking-wider">Total Orders</span>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-col justify-center space-y-3 py-2">
+                {donutData.map((entry) => {
+                  const pct = ((entry.value / totalOrders) * 100).toFixed(0);
+                  return (
+                    <div key={entry.name} className="flex items-center space-x-2.5 text-xs">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: entry.color }}
+                      />
+                      <span className="text-textPrimary font-medium">{entry.name}</span>
+                      <span className="text-textMuted font-mono">— {entry.value} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
