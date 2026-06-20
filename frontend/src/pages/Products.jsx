@@ -1,25 +1,15 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
 import { SlideOver } from '../components/common/SlideOver';
-import { Plus, Edit2, Trash2, Tag, Info, ShieldAlert, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Tag, Info, ShieldAlert, AlertCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/client';
 
 export default function Products() {
   const navigate = useNavigate();
-  const { 
-    products, 
-    vendors, 
-    boms, 
-    currentRole, 
-    addProduct, 
-    editProduct, 
-    deleteProduct, 
-    adjustStock,
-    salesOrderLines,
-    salesOrders,
-    purchaseOrderLines,
-    purchaseOrders
-  } = useErpStore();
+  const queryClient = useQueryClient();
+  const { currentRole } = useErpStore();
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
@@ -39,8 +29,66 @@ export default function Products() {
     vendor_id: "",
     bom_id: ""
   });
-  
   const [stockAdjustVal, setStockAdjustVal] = useState(0);
+
+  // Fetching Data with React Query
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products/')
+  });
+
+  const { data: vendors = [] } = useQuery({
+    queryKey: ['vendors'],
+    queryFn: () => api.get('/vendors/')
+  });
+
+  const { data: boms = [] } = useQuery({
+    queryKey: ['boms'],
+    queryFn: () => api.get('/boms/')
+  });
+
+  const { data: salesOrders = [] } = useQuery({
+    queryKey: ['salesOrders'],
+    queryFn: () => api.get('/sales-orders/')
+  });
+
+  // Mutations
+  const createProductMutation = useMutation({
+    mutationFn: (newProd) => api.post('/products/', newProd),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsSlideOverOpen(false);
+    },
+    onError: (err) => alert("Failed to create product: " + err.message)
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/products/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsSlideOverOpen(false);
+    },
+    onError: (err) => alert("Failed to update product: " + err.message)
+  });
+
+  const deleteProductMutation = useMutation({
+    mutationFn: (id) => api.delete(`/products/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsSlideOverOpen(false);
+    },
+    onError: (err) => alert("Failed to delete product: " + err.message)
+  });
+
+  const adjustStockMutation = useMutation({
+    mutationFn: ({ id, qty }) => api.put(`/products/${id}`, { on_hand_qty: qty }),
+    onSuccess: (updatedProduct) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setSelectedProduct(updatedProduct);
+      alert("Stock adjusted successfully.");
+    },
+    onError: (err) => alert("Failed to adjust stock: " + err.message)
+  });
 
   // Role permissions checks
   const canModify = currentRole === "SuperAdmin" || currentRole === "StoreAdmin";
@@ -102,12 +150,18 @@ export default function Products() {
         return;
       }
 
+      // Convert empties to null for backend
+      const payload = {
+        ...formData,
+        vendor_id: formData.vendor_id || null,
+        bom_id: formData.bom_id || null,
+      };
+
       if (isCreating) {
-        addProduct(formData);
+        createProductMutation.mutate(payload);
       } else {
-        editProduct(selectedProduct.id, formData);
+        updateProductMutation.mutate({ id: selectedProduct.id, data: payload });
       }
-      setIsSlideOverOpen(false);
     } catch (err) {
       alert(err.message);
     }
@@ -116,35 +170,25 @@ export default function Products() {
   const handleDelete = () => {
     if (!canModify || !selectedProduct) return;
     if (window.confirm(`Are you sure you want to delete ${selectedProduct.name}?`)) {
-      try {
-        deleteProduct(selectedProduct.id);
-        setIsSlideOverOpen(false);
-      } catch (err) {
-        alert(err.message);
-      }
+      deleteProductMutation.mutate(selectedProduct.id);
     }
   };
 
   const handleStockAdjustSubmit = (e) => {
     e.preventDefault();
     if (!canAdjustStock || !selectedProduct) return;
-    adjustStock(selectedProduct.id, Number(stockAdjustVal));
-    
-    // Refresh selected view quantity
-    setSelectedProduct(prev => ({
-      ...prev,
-      on_hand_qty: Number(stockAdjustVal)
-    }));
+    adjustStockMutation.mutate({ id: selectedProduct.id, qty: Number(stockAdjustVal) });
   };
 
   // Smart stats calculation
   const getProductStats = (productId) => {
-    const relatedSO = salesOrderLines.filter(sol => sol.product_id === productId);
-    const relatedPO = purchaseOrderLines.filter(pol => pol.product_id === productId);
-    
-    const salesCount = new Set(relatedSO.map(l => l.sales_order_id)).size;
-    const purchaseCount = new Set(relatedPO.map(l => l.purchase_order_id)).size;
-
+    let salesCount = 0;
+    salesOrders.forEach(so => {
+      if (so.lines && so.lines.some(l => l.product_id === productId)) {
+        salesCount++;
+      }
+    });
+    const purchaseCount = 0; // Purchase orders not yet supported by backend API
     return { salesCount, purchaseCount };
   };
 
@@ -194,7 +238,14 @@ export default function Products() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-xs">
-            {filteredProducts.length === 0 ? (
+            {isLoadingProducts ? (
+              <tr>
+                <td colSpan="9" className="py-8 text-center text-textMuted font-mono">
+                  <Loader2 className="animate-spin mx-auto mb-2" size={24} />
+                  Loading products...
+                </td>
+              </tr>
+            ) : filteredProducts.length === 0 ? (
               <tr>
                 <td colSpan="9" className="py-8 text-center text-textMuted font-mono">
                   No products found. Add a product to get started.
@@ -328,7 +379,7 @@ export default function Products() {
                 <input
                   type="text"
                   required
-                  disabled={!canModify}
+                  disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Dining Table"
@@ -340,7 +391,7 @@ export default function Products() {
                 <div className="flex flex-col space-y-1.5">
                   <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Product Type</label>
                   <select
-                    disabled={!canModify}
+                    disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed"
@@ -353,7 +404,7 @@ export default function Products() {
                 <div className="flex flex-col space-y-1.5">
                   <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Procure on Demand</label>
                   <select
-                    disabled={!canModify}
+                    disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.procure_on_demand ? "true" : "false"}
                     onChange={(e) => setFormData({ ...formData, procure_on_demand: e.target.value === "true" })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed"
@@ -371,7 +422,7 @@ export default function Products() {
                     type="number"
                     step="0.01"
                     min="0"
-                    disabled={!canModify}
+                    disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.sales_price}
                     onChange={(e) => setFormData({ ...formData, sales_price: Number(e.target.value) })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed font-mono"
@@ -384,7 +435,7 @@ export default function Products() {
                     type="number"
                     step="0.01"
                     min="0"
-                    disabled={!canModify}
+                    disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     value={formData.cost_price}
                     onChange={(e) => setFormData({ ...formData, cost_price: Number(e.target.value) })}
                     className="disabled:opacity-60 disabled:cursor-not-allowed font-mono"
@@ -469,9 +520,10 @@ export default function Products() {
                     <button
                       type="button"
                       onClick={handleStockAdjustSubmit}
-                      className="bg-elevated hover:bg-card border border-border text-textPrimary text-xs rounded-custom py-2 px-4 font-semibold transition-all duration-150"
+                      disabled={adjustStockMutation.isPending}
+                      className="bg-elevated hover:bg-card border border-border text-textPrimary text-xs rounded-custom py-2 px-4 font-semibold transition-all duration-150 disabled:opacity-50"
                     >
-                      Log Adjustment
+                      {adjustStockMutation.isPending ? 'Logging...' : 'Log Adjustment'}
                     </button>
                   </div>
                   <p className="text-[10px] text-textMuted italic">Every override writes an entry directly into the permanent Stock Ledger.</p>
@@ -489,7 +541,7 @@ export default function Products() {
                 <div className="grid grid-cols-2 bg-background border border-border p-1 rounded-custom">
                   <button
                     type="button"
-                    disabled={!canModify}
+                    disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     onClick={() => setFormData({ ...formData, procurement_strategy: "MTS" })}
                     className={`py-1.5 text-xs font-semibold rounded transition-all duration-150 ${
                       formData.procurement_strategy === "MTS"
@@ -501,7 +553,7 @@ export default function Products() {
                   </button>
                   <button
                     type="button"
-                    disabled={!canModify}
+                    disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                     onClick={() => setFormData({ ...formData, procurement_strategy: "MTO" })}
                     className={`py-1.5 text-xs font-semibold rounded transition-all duration-150 ${
                       formData.procurement_strategy === "MTO"
@@ -526,7 +578,7 @@ export default function Products() {
                   <div className="flex flex-col space-y-1.5">
                     <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Replenishment Route (Procurement Type)</label>
                     <select
-                      disabled={!canModify}
+                      disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                       value={formData.procurement_type}
                       onChange={(e) => setFormData({ ...formData, procurement_type: e.target.value })}
                     >
@@ -540,7 +592,7 @@ export default function Products() {
                     <div className="flex flex-col space-y-1.5">
                       <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Preferred Vendor</label>
                       <select
-                        disabled={!canModify}
+                        disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                         value={formData.vendor_id}
                         onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value })}
                         required={formData.procurement_type === "Purchase"}
@@ -558,7 +610,7 @@ export default function Products() {
                     <div className="flex flex-col space-y-1.5">
                       <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Associated Bill of Materials (BoM)</label>
                       <select
-                        disabled={!canModify}
+                        disabled={!canModify || createProductMutation.isPending || updateProductMutation.isPending}
                         value={formData.bom_id}
                         onChange={(e) => setFormData({ ...formData, bom_id: e.target.value })}
                         required={formData.procurement_type === "Manufacturing"}
@@ -581,9 +633,10 @@ export default function Products() {
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex items-center space-x-1 hover:text-statusRed transition-colors duration-150 text-xs text-textMuted py-2"
+                disabled={deleteProductMutation.isPending}
+                className="flex items-center space-x-1 hover:text-statusRed transition-colors duration-150 text-xs text-textMuted py-2 disabled:opacity-50"
               >
-                <Trash2 size={14} />
+                {deleteProductMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                 <span>Delete Catalog Listing</span>
               </button>
             )}
@@ -600,9 +653,10 @@ export default function Products() {
               {canModify && (
                 <button
                   type="submit"
-                  className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150"
+                  disabled={createProductMutation.isPending || updateProductMutation.isPending}
+                  className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150 disabled:opacity-50"
                 >
-                  Save Product
+                  {createProductMutation.isPending || updateProductMutation.isPending ? "Saving..." : "Save Product"}
                 </button>
               )}
             </div>

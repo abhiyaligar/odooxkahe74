@@ -3,6 +3,16 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { useErpStore } from './store/erpStore';
 import { Layout } from './components/common/Layout';
 import { ThemeProvider } from './components/common/ThemeProvider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Import Pages
 import LoginPage from './pages/Login';
@@ -127,10 +137,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

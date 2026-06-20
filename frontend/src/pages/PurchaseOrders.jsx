@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
 import { SlideOver } from '../components/common/SlideOver';
 import { 
   Plus, 
@@ -17,14 +19,22 @@ export default function PurchaseOrders() {
   const { 
     purchaseOrders, 
     purchaseOrderLines, 
-    products, 
-    vendors, 
     currentRole,
     createPurchaseOrder,
     confirmPurchaseOrder,
     receivePurchaseOrderLine,
     cancelPurchaseOrder
   } = useErpStore();
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products/')
+  });
+
+  const { data: vendors = [] } = useQuery({
+    queryKey: ['vendors'],
+    queryFn: () => api.get('/vendors/')
+  });
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);

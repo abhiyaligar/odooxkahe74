@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Check, Loader2, ShoppingBag, Store, AlertCircle } from 'lucide-react';
+import { api } from '../api/client';
 
 export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHome }) {
   const [role, setRole] = useState(null); // 'Customer' or 'StoreAdmin'
@@ -17,7 +18,6 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [staffRole, setStaffRole] = useState('Admin'); // default for StoreAdmin
-  const [inviteCode, setInviteCode] = useState('');
 
   const handleRoleSelect = (selectedRole) => {
     if (isLoading) return;
@@ -49,34 +49,44 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
       if (!address) newErrors.address = 'Delivery address is required';
     }
 
-    if (role === 'StoreAdmin') {
-      if (!inviteCode) newErrors.inviteCode = 'Invite code is required';
-      else if (inviteCode !== 'SHIV2026') {
-        newErrors.inviteCode = 'Invalid invite code. Try: SHIV2026';
-      }
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isLoading || !role || !agreeTerms) return;
 
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({});
     
-    // Simulate API registration delay
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      // Determine actual system role: Customer or staff role selected in dropdown
+    try {
       const finalRole = role === 'Customer' ? 'Customer' : staffRole === 'Admin' ? 'StoreAdmin' : staffRole;
       
+      await api.post('/auth/signup', {
+        name,
+        email,
+        password,
+        role: finalRole,
+      });
+      
+      // Auto-login after signup, or just redirect to login (the app logic currently passes role to onSignupSuccess which does a mock login)
+      // Since it's better to login via the API to get the token, we will call login API.
+      const params = new URLSearchParams();
+      params.append('username', email);
+      params.append('password', password);
+      
+      const res = await api.post('/auth/login', params);
+      localStorage.setItem('access_token', res.access_token);
+      
       onSignupSuccess(finalRole);
-    }, 1200);
+    } catch (err) {
+      setErrors({ general: err.message || 'Signup failed' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -154,6 +164,13 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 animate-all-custom transition-all duration-150">
+            
+            {errors.general && (
+              <div className="bg-statusRed/10 border border-statusRed/20 text-statusRed p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed mb-4">
+                <AlertCircle className="h-4 w-4 shrink-0 text-statusRed mt-0.5" />
+                <span>{errors.general}</span>
+              </div>
+            )}
             
             {/* Shared Field: Full Name */}
             <div className="flex flex-col space-y-1">
@@ -290,7 +307,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
             {/* CONDITIONAL FIELDS: STORE ADMIN */}
             {role === 'StoreAdmin' && (
               <div className="space-y-4 pt-1">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Staff Role selection */}
                   <div className="flex flex-col space-y-1">
                     <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Staff Role</label>
@@ -307,28 +324,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                       <option value="InventoryManager">Inventory Manager</option>
                     </select>
                   </div>
-
-                  {/* Invite Code */}
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Invite Code</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. SHIV2026"
-                      disabled={isLoading}
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value)}
-                      className={`w-full bg-card border text-xs py-2 font-mono uppercase ${
-                        errors.inviteCode ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
-                      }`}
-                      required
-                    />
-                  </div>
                 </div>
-                {errors.inviteCode ? (
-                  <span className="text-[9px] text-statusRed font-mono block">{errors.inviteCode}</span>
-                ) : (
-                  <span className="text-[9px] text-textMuted font-mono block">Ask manager for the active system invite code.</span>
-                )}
               </div>
             )}
 

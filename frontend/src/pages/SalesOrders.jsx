@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useErpStore } from '../store/erpStore';
 import { SlideOver } from '../components/common/SlideOver';
 import { 
@@ -7,25 +7,17 @@ import {
   AlertTriangle, 
   Calendar, 
   User, 
-  DollarSign, 
   ShoppingBag, 
   PackageOpen,
-  ArrowRight,
-  TrendingDown
+  TrendingDown,
+  Loader2
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/client';
 
 export default function SalesOrders() {
-  const { 
-    salesOrders, 
-    salesOrderLines, 
-    products, 
-    customers, 
-    currentRole,
-    createSalesOrder,
-    confirmSalesOrder,
-    deliverSalesOrderLine,
-    cancelSalesOrder
-  } = useErpStore();
+  const queryClient = useQueryClient();
+  const { currentRole } = useErpStore();
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
@@ -36,44 +28,85 @@ export default function SalesOrders() {
   const [customerSelect, setCustomerSelect] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("2026-06-23T18:00");
   const [orderLines, setOrderLines] = useState([
-    { product_id: "", quantity: 1, unit_price: 0 }
+    { product_id: "", quantity_ordered: 1, unit_price: 0 }
   ]);
-
-  // Delivery transaction states
-  const [deliveryInputs, setDeliveryInputs] = useState({});
 
   // Role check
   const canModify = currentRole === "SuperAdmin" || currentRole === "StoreAdmin" || currentRole === "SalesUser";
 
+  // Fetch data
+  const { data: salesOrders = [], isLoading: isLoadingOrders } = useQuery({
+    queryKey: ['salesOrders'],
+    queryFn: () => api.get('/sales-orders/')
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products/')
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => api.get('/customers/')
+  });
+
+  // Mutations
+  const createSalesOrderMutation = useMutation({
+    mutationFn: (newOrder) => api.post('/sales-orders/', newOrder),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
+      setIsCreating(false);
+      setSelectedOrder(data); // Stay open to view confirmed details
+    },
+    onError: (err) => alert("Failed to create sales order: " + err.message)
+  });
+
+  const confirmSalesOrderMutation = useMutation({
+    mutationFn: (id) => api.post(`/sales-orders/${id}/confirm`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] }); 
+      setIsSlideOverOpen(false);
+    },
+    onError: (err) => alert("Failed to confirm sales order: " + err.message)
+  });
+
+  const deliverSalesOrderMutation = useMutation({
+    mutationFn: (id) => api.post(`/sales-orders/${id}/deliver`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] }); 
+      setIsSlideOverOpen(false);
+    },
+    onError: (err) => alert("Failed to deliver sales order: " + err.message)
+  });
+
+  // Keep selected order in sync with fresh data
+  useEffect(() => {
+    if (selectedOrder) {
+      const freshOrder = salesOrders.find(o => o.id === selectedOrder.id);
+      if (freshOrder) setSelectedOrder(freshOrder);
+    }
+  }, [salesOrders, selectedOrder?.id]);
+
   // Filter Sales Orders based on search query
   const filteredOrders = salesOrders.filter(so => {
     const customer = customers.find(c => c.id === so.customer_id);
-    return so.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    return so.order_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
            (customer && customer.name.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
-  const getOrderTotal = (soId) => {
-    const lines = salesOrderLines.filter(l => l.sales_order_id === soId);
-    return lines.reduce((sum, line) => sum + (line.quantity_ordered * line.unit_price), 0);
+  const getOrderTotal = (so) => {
+    return so.lines?.reduce((sum, line) => sum + (line.quantity_ordered * line.unit_price), 0) || 0;
   };
 
-  const getOrderItemCount = (soId) => {
-    const lines = salesOrderLines.filter(l => l.sales_order_id === soId);
-    return lines.reduce((sum, line) => sum + line.quantity_ordered, 0);
+  const getOrderItemCount = (so) => {
+    return so.lines?.reduce((sum, line) => sum + line.quantity_ordered, 0) || 0;
   };
 
   const handleRowClick = (so) => {
     setSelectedOrder(so);
     setIsCreating(false);
-    
-    // Reset delivery inputs
-    const lines = salesOrderLines.filter(l => l.sales_order_id === so.id);
-    const initialInputs = {};
-    lines.forEach(l => {
-      initialInputs[l.id] = l.quantity_ordered - l.quantity_delivered;
-    });
-    setDeliveryInputs(initialInputs);
-    
     setIsSlideOverOpen(true);
   };
 
@@ -82,7 +115,13 @@ export default function SalesOrders() {
     setIsCreating(true);
     setSelectedOrder(null);
     setCustomerSelect(customers[0]?.id || "");
-    setOrderLines([{ product_id: products[0]?.id || "", quantity: 1, unit_price: products[0]?.sales_price || 0 }]);
+    setOrderLines([{ product_id: products[0]?.id || "", quantity_ordered: 1, unit_price: products[0]?.sales_price || 0 }]);
+    
+    // Set default future date
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 3);
+    setDeliveryDate(tmr.toISOString().slice(0, 16));
+    
     setIsSlideOverOpen(true);
   };
 
@@ -90,7 +129,7 @@ export default function SalesOrders() {
     const defaultProduct = products[0];
     setOrderLines([
       ...orderLines,
-      { product_id: defaultProduct?.id || "", quantity: 1, unit_price: defaultProduct?.sales_price || 0 }
+      { product_id: defaultProduct?.id || "", quantity_ordered: 1, unit_price: defaultProduct?.sales_price || 0 }
     ]);
   };
 
@@ -111,7 +150,7 @@ export default function SalesOrders() {
 
   const handleLineQtyChange = (idx, qty) => {
     const updated = [...orderLines];
-    updated[idx] = { ...updated[idx], quantity: Math.max(1, Number(qty)) };
+    updated[idx] = { ...updated[idx], quantity_ordered: Math.max(1, Number(qty)) };
     setOrderLines(updated);
   };
 
@@ -130,54 +169,33 @@ export default function SalesOrders() {
       return;
     }
 
-    const soId = createSalesOrder(customerSelect, new Date(deliveryDate).toISOString(), orderLines);
-    setIsSlideOverOpen(false);
-    
-    // Open the newly created order's details
-    const state = useErpStore.getState();
-    const createdSo = state.salesOrders.find(o => o.id === soId);
-    if (createdSo) {
-      handleRowClick(createdSo);
-    }
+    const payload = {
+      customer_id: customerSelect,
+      expected_delivery_date: new Date(deliveryDate).toISOString(),
+      lines: orderLines.map(l => ({
+        product_id: l.product_id,
+        quantity_ordered: l.quantity_ordered
+      }))
+    };
+
+    createSalesOrderMutation.mutate(payload);
   };
 
   const handleConfirm = () => {
     if (!canModify || !selectedOrder) return;
-    confirmSalesOrder(selectedOrder.id);
-    // Refresh local selected order reference
-    const state = useErpStore.getState();
-    setSelectedOrder(state.salesOrders.find(o => o.id === selectedOrder.id));
+    confirmSalesOrderMutation.mutate(selectedOrder.id);
   };
 
   const handleCancel = () => {
     if (!canModify || !selectedOrder) return;
-    if (window.confirm("Are you sure you want to cancel this Sales Order? All reserved stock will be released.")) {
-      cancelSalesOrder(selectedOrder.id);
-      const state = useErpStore.getState();
-      setSelectedOrder(state.salesOrders.find(o => o.id === selectedOrder.id));
-    }
+    // Backend doesn't have a cancel endpoint in openapi, just confirm and deliver.
+    alert("Cancellation endpoint not available in backend API.");
   };
 
-  const handleDeliver = (lineId) => {
+  const handleDeliver = () => {
     if (!canModify || !selectedOrder) return;
-    const qty = Number(deliveryInputs[lineId] || 0);
-    try {
-      deliverSalesOrderLine(selectedOrder.id, lineId, qty);
-      // Refresh local references
-      const state = useErpStore.getState();
-      setSelectedOrder(state.salesOrders.find(o => o.id === selectedOrder.id));
-      
-      // Update input placeholder to reflect remaining qty
-      const updatedLine = state.salesOrderLines.find(l => l.id === lineId);
-      if (updatedLine) {
-        setDeliveryInputs(prev => ({
-          ...prev,
-          [lineId]: updatedLine.quantity_ordered - updatedLine.quantity_delivered
-        }));
-      }
-    } catch (err) {
-      alert(err.message);
-    }
+    // Backend deliver endpoint processes the entire remaining order
+    deliverSalesOrderMutation.mutate(selectedOrder.id);
   };
 
   // Helper to compute pre-confirmation stock shortage status
@@ -187,7 +205,7 @@ export default function SalesOrders() {
       if (!product) return null;
       
       const freeToUse = product.on_hand_qty - product.reserved_qty;
-      const needed = Number(line.quantity_ordered || line.quantity || 0);
+      const needed = Number(line.quantity_ordered || 0);
       const shortage = Math.max(0, needed - freeToUse);
 
       return {
@@ -201,16 +219,9 @@ export default function SalesOrders() {
     }).filter(Boolean);
   };
 
-  const getShortageStatus = (soStatus) => {
-    if (soStatus === "Draft") {
-      const lines = salesOrderLines.filter(l => l.sales_order_id === selectedOrder?.id);
-      return calculateShortageDetails(lines);
-    }
-    return [];
-  };
-
-  const activeShortages = selectedOrder ? getShortageStatus(selectedOrder.status) : [];
-  const hasShortages = activeShortages.some(s => s.shortage > 0);
+  const activeShortages = selectedOrder && selectedOrder.status === "Draft" 
+    ? calculateShortageDetails(selectedOrder.lines || []) 
+    : [];
 
   // Stepper Stage Helpers
   const renderStepper = (status) => {
@@ -238,7 +249,6 @@ export default function SalesOrders() {
         {stages.map((stage, idx) => {
           const isCompleted = idx < currentStageIdx;
           const isActive = idx === currentStageIdx;
-          const isFuture = idx > currentStageIdx;
 
           return (
             <React.Fragment key={stage.key}>
@@ -308,7 +318,14 @@ export default function SalesOrders() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-xs">
-            {filteredOrders.length === 0 ? (
+            {isLoadingOrders ? (
+              <tr>
+                <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
+                  <Loader2 className="animate-spin mx-auto mb-2" size={24} />
+                  Loading sales orders...
+                </td>
+              </tr>
+            ) : filteredOrders.length === 0 ? (
               <tr>
                 <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
                   No sales orders found. Click "+ New Sales Order" to start a commercial transaction.
@@ -317,8 +334,8 @@ export default function SalesOrders() {
             ) : (
               filteredOrders.map((so) => {
                 const customer = customers.find(c => c.id === so.customer_id);
-                const itemsCount = getOrderItemCount(so.id);
-                const total = getOrderTotal(so.id);
+                const itemsCount = getOrderItemCount(so);
+                const total = getOrderTotal(so);
                 
                 return (
                   <tr 
@@ -329,7 +346,7 @@ export default function SalesOrders() {
                     <td className="py-3 px-4 font-mono font-medium text-textPrimary">{so.order_number}</td>
                     <td className="py-3 px-4 text-textSecondary">{customer ? customer.name : 'Unknown'}</td>
                     <td className="py-3 px-4 text-textSecondary">{new Date(so.created_at).toLocaleDateString()}</td>
-                    <td className="py-3 px-4 text-textSecondary">{new Date(so.expected_delivery_date).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-textSecondary">{so.expected_delivery_date ? new Date(so.expected_delivery_date).toLocaleDateString() : '-'}</td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
                         so.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
@@ -369,6 +386,7 @@ export default function SalesOrders() {
                   value={customerSelect} 
                   onChange={(e) => setCustomerSelect(e.target.value)}
                   required
+                  disabled={createSalesOrderMutation.isPending}
                 >
                   {customers.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -383,6 +401,7 @@ export default function SalesOrders() {
                   value={deliveryDate} 
                   onChange={(e) => setDeliveryDate(e.target.value)}
                   required
+                  disabled={createSalesOrderMutation.isPending}
                   className="font-mono text-xs"
                 />
               </div>
@@ -395,7 +414,8 @@ export default function SalesOrders() {
                 <button
                   type="button"
                   onClick={handleAddLine}
-                  className="text-[10px] bg-elevated hover:bg-card border border-border text-textPrimary px-2.5 py-1 rounded-custom font-semibold transition-all duration-150"
+                  disabled={createSalesOrderMutation.isPending}
+                  className="text-[10px] bg-elevated hover:bg-card border border-border text-textPrimary px-2.5 py-1 rounded-custom font-semibold transition-all duration-150 disabled:opacity-50"
                 >
                   + Add Line
                 </button>
@@ -411,6 +431,7 @@ export default function SalesOrders() {
                         onChange={(e) => handleLineProductChange(idx, e.target.value)}
                         className="w-full text-xs"
                         required
+                        disabled={createSalesOrderMutation.isPending}
                       >
                         <option value="">Select Product...</option>
                         {products.filter(p => p.type === "FinishedGood").map(p => (
@@ -425,32 +446,24 @@ export default function SalesOrders() {
                         type="number"
                         min="1"
                         placeholder="Qty"
-                        value={line.quantity}
+                        value={line.quantity_ordered}
                         onChange={(e) => handleLineQtyChange(idx, e.target.value)}
                         className="w-full text-xs font-mono text-center"
                         required
+                        disabled={createSalesOrderMutation.isPending}
                       />
                     </div>
 
-                    {/* Price */}
-                    <div className="w-28">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Price ($)"
-                        value={line.unit_price}
-                        onChange={(e) => handleLinePriceChange(idx, e.target.value)}
-                        className="w-full text-xs font-mono"
-                        required
-                      />
+                    {/* Price (Display Only as API infers from product config if not sent) */}
+                    <div className="w-28 text-right font-mono text-xs text-textSecondary pr-2">
+                      ${line.unit_price.toFixed(2)}
                     </div>
 
                     {/* Remove button */}
                     <button
                       type="button"
                       onClick={() => handleRemoveLine(idx)}
-                      disabled={orderLines.length === 1}
+                      disabled={orderLines.length === 1 || createSalesOrderMutation.isPending}
                       className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
@@ -498,9 +511,10 @@ export default function SalesOrders() {
               </button>
               <button
                 type="submit"
-                className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150"
+                disabled={createSalesOrderMutation.isPending}
+                className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150 disabled:opacity-50"
               >
-                Save Draft Order
+                {createSalesOrderMutation.isPending ? "Saving..." : "Save Draft Order"}
               </button>
             </div>
           </form>
@@ -528,7 +542,7 @@ export default function SalesOrders() {
                   <div className="flex flex-col">
                     <span className="text-[10px] text-textMuted font-semibold uppercase">Delivery Promise</span>
                     <span className="font-medium text-textPrimary font-mono">
-                      {new Date(selectedOrder.expected_delivery_date).toLocaleDateString()}
+                      {selectedOrder.expected_delivery_date ? new Date(selectedOrder.expected_delivery_date).toLocaleDateString() : '-'}
                     </span>
                   </div>
                 </div>
@@ -549,18 +563,16 @@ export default function SalesOrders() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {salesOrderLines
-                        .filter(l => l.sales_order_id === selectedOrder.id)
-                        .map(line => {
+                      {selectedOrder.lines?.map(line => {
                           const prod = products.find(p => p.id === line.product_id);
                           return (
                             <tr key={line.id} className="hover:bg-elevated/10">
                               <td className="py-2 px-3 text-textPrimary font-sans font-medium">{prod?.name || 'Unknown'}</td>
                               <td className="py-2 px-3 text-right">{line.quantity_ordered}</td>
                               <td className="py-2 px-3 text-right text-textSecondary">{line.quantity_delivered}</td>
-                              <td className="py-2 px-3 text-right text-textSecondary">${line.unit_price.toFixed(2)}</td>
+                              <td className="py-2 px-3 text-right text-textSecondary">${(line.unit_price || 0).toFixed(2)}</td>
                               <td className="py-2 px-3 text-right text-textPrimary font-bold">
-                                ${(line.quantity_ordered * line.unit_price).toFixed(2)}
+                                ${(line.quantity_ordered * (line.unit_price || 0)).toFixed(2)}
                               </td>
                             </tr>
                           );
@@ -610,65 +622,21 @@ export default function SalesOrders() {
 
               {/* Fulfillment delivery inputs panel (For Confirmed or PartiallyDelivered Orders) */}
               {(selectedOrder.status === "Confirmed" || selectedOrder.status === "PartiallyDelivered") && (
-                <div className="border border-border rounded-custom p-4 bg-card/10 space-y-3">
-                  <div className="flex items-center space-x-2 text-textSecondary border-b border-border/60 pb-2">
+                <div className="border border-border rounded-custom p-4 bg-card/10 space-y-3 text-center">
+                  <div className="flex items-center justify-center space-x-2 text-textSecondary border-b border-border/60 pb-2">
                     <PackageOpen size={14} className="text-textSecondary" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Ship / Register Deliveries</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Ship Remaining Order</span>
                   </div>
-
-                  <div className="space-y-3">
-                    {salesOrderLines
-                      .filter(l => l.sales_order_id === selectedOrder.id)
-                      .map(line => {
-                        const prod = products.find(p => p.id === line.product_id);
-                        const remaining = line.quantity_ordered - line.quantity_delivered;
-                        
-                        if (remaining <= 0) return null;
-                        
-                        // Check if we have on-hand items to ship
-                        const onHandAvailable = prod ? prod.on_hand_qty : 0;
-                        const maxShip = Math.min(remaining, onHandAvailable);
-
-                        return (
-                          <div key={line.id} className="flex items-center justify-between text-xs">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-textPrimary">{prod?.name}</span>
-                              <span className="text-[10px] text-textMuted font-mono">
-                                Awaiting: {remaining} unit(s) (Physical Stock: {onHandAvailable})
-                              </span>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="number"
-                                min="1"
-                                max={maxShip}
-                                value={deliveryInputs[line.id] || 0}
-                                onChange={(e) => setDeliveryInputs({
-                                  ...deliveryInputs,
-                                  [line.id]: Math.min(maxShip, Math.max(1, Number(e.target.value)))
-                                })}
-                                disabled={maxShip <= 0 || !canModify}
-                                className="w-16 font-mono text-center py-1 text-xs"
-                              />
-                              <button
-                                type="button"
-                                disabled={maxShip <= 0 || !canModify}
-                                onClick={() => handleDeliver(line.id)}
-                                className="bg-elevated hover:bg-card border border-border text-textPrimary text-[11px] rounded-custom px-3 py-1 font-semibold disabled:opacity-40 disabled:hover:bg-elevated transition-all duration-150 font-mono"
-                              >
-                                Ship
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    {salesOrderLines
-                      .filter(l => l.sales_order_id === selectedOrder.id)
-                      .every(l => l.quantity_ordered === l.quantity_delivered) && (
-                        <p className="text-[11px] text-statusGreen italic text-center font-semibold">All items have been successfully delivered to the customer.</p>
-                      )}
-                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={handleDeliver}
+                    disabled={deliverSalesOrderMutation.isPending || !canModify}
+                    className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150 disabled:opacity-50"
+                  >
+                    {deliverSalesOrderMutation.isPending ? 'Processing...' : 'Deliver All Remaining Quantities'}
+                  </button>
+                  <p className="text-[10px] text-textMuted mt-2">The backend will automatically fulfill all remaining ordered quantities using available stock.</p>
                 </div>
               )}
 
@@ -697,9 +665,10 @@ export default function SalesOrders() {
                     <button
                       type="button"
                       onClick={handleConfirm}
-                      className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150"
+                      disabled={confirmSalesOrderMutation.isPending}
+                      className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150 disabled:opacity-50"
                     >
-                      Confirm Order
+                      {confirmSalesOrderMutation.isPending ? 'Confirming...' : 'Confirm Order'}
                     </button>
                   )}
                 </div>

@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
 import { SlideOver } from '../components/common/SlideOver';
-import { Plus, Trash2, Check, Layers, AlertCircle, ShieldAlert } from 'lucide-react';
+import { Plus, Check, Layers, AlertCircle, Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/client';
 
 export default function BoM() {
+  const queryClient = useQueryClient();
   const { 
-    boms, 
-    bomLines, 
     bomOperations, 
-    products, 
     workCenters, 
     currentRole,
-    createBoM
+    addBomOperations // We will need to define this or just skip storing operations locally
   } = useErpStore();
 
   const [selectedBom, setSelectedBom] = useState(null);
@@ -34,6 +34,32 @@ export default function BoM() {
   // Role permissions check
   const canModify = currentRole === "SuperAdmin" || currentRole === "StoreAdmin";
 
+  // Fetch data
+  const { data: boms = [], isLoading: isLoadingBoms } = useQuery({
+    queryKey: ['boms'],
+    queryFn: () => api.get('/boms/')
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products/')
+  });
+
+  // Mutations
+  const createBomMutation = useMutation({
+    mutationFn: (newBom) => api.post('/boms/', newBom),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['boms'] });
+      
+      // Optionally store operations locally if needed
+      // useErpStore.getState().addBomOperations(data.id, formOperations);
+      
+      setIsSlideOverOpen(false);
+    },
+    onError: (err) => setErrorMessage(err.message)
+  });
+
+
   // Filter boms based on parent product name
   const filteredBoms = boms.filter(bom => {
     const product = products.find(p => p.id === bom.product_id);
@@ -41,8 +67,8 @@ export default function BoM() {
            (product && product.name.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
-  const getComponentCount = (bomId) => {
-    return bomLines.filter(bl => bl.bom_id === bomId).length;
+  const getComponentCount = (bom) => {
+    return bom.lines?.length || 0;
   };
 
   const getOperationCount = (bomId) => {
@@ -132,18 +158,15 @@ export default function BoM() {
       return;
     }
 
-    try {
-      createBoM({
-        product_id: productSelect,
-        name: bomName,
-        version: versionSelect,
-        components: formComponents,
-        operations: formOperations
-      });
-      setIsSlideOverOpen(false);
-    } catch (err) {
-      setErrorMessage(err.message);
-    }
+    createBomMutation.mutate({
+      product_id: productSelect,
+      name: bomName,
+      version: versionSelect,
+      lines: formComponents.map(c => ({
+        component_product_id: c.component_product_id,
+        quantity_required: Number(c.quantity_required)
+      }))
+    });
   };
 
   return (
@@ -185,7 +208,14 @@ export default function BoM() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-xs">
-            {filteredBoms.length === 0 ? (
+            {isLoadingBoms ? (
+               <tr>
+               <td colSpan="6" className="py-8 text-center text-textMuted font-mono">
+                 <Loader2 className="animate-spin mx-auto mb-2" size={24} />
+                 Loading BoMs...
+               </td>
+             </tr>
+            ) : filteredBoms.length === 0 ? (
               <tr>
                 <td colSpan="6" className="py-8 text-center text-textMuted font-mono">
                   No Bills of Materials configured. Create a manufacturing recipe to start building products.
@@ -194,7 +224,7 @@ export default function BoM() {
             ) : (
               filteredBoms.map((bom) => {
                 const product = products.find(p => p.id === bom.product_id);
-                const compCount = getComponentCount(bom.id);
+                const compCount = getComponentCount(bom);
                 const opCount = getOperationCount(bom.id);
                 
                 return (
@@ -243,6 +273,7 @@ export default function BoM() {
                   value={productSelect} 
                   onChange={(e) => setProductSelect(e.target.value)}
                   required
+                  disabled={createBomMutation.isPending}
                 >
                   {products.filter(p => p.type === "FinishedGood").map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -258,6 +289,7 @@ export default function BoM() {
                   onChange={(e) => setVersionSelect(e.target.value)}
                   placeholder="v1"
                   required
+                  disabled={createBomMutation.isPending}
                   className="font-mono text-xs"
                 />
               </div>
@@ -270,6 +302,8 @@ export default function BoM() {
                 value={bomName} 
                 onChange={(e) => setBomName(e.target.value)}
                 placeholder="e.g. Dining Table Premium BoM"
+                disabled={createBomMutation.isPending}
+                required
               />
             </div>
 
@@ -280,7 +314,8 @@ export default function BoM() {
                 <button
                   type="button"
                   onClick={handleAddComponentRow}
-                  className="text-[10px] bg-elevated hover:bg-card border border-border text-textPrimary px-2.5 py-1 rounded-custom font-semibold transition-all duration-150"
+                  disabled={createBomMutation.isPending}
+                  className="text-[10px] bg-elevated hover:bg-card border border-border text-textPrimary px-2.5 py-1 rounded-custom font-semibold transition-all duration-150 disabled:opacity-50"
                 >
                   + Add Component
                 </button>
@@ -296,6 +331,7 @@ export default function BoM() {
                         onChange={(e) => handleComponentChange(idx, "component_product_id", e.target.value)}
                         className="w-full text-xs"
                         required
+                        disabled={createBomMutation.isPending}
                       >
                         <option value="">Select component...</option>
                         {products.map(p => (
@@ -315,6 +351,7 @@ export default function BoM() {
                         onChange={(e) => handleComponentChange(idx, "quantity_required", e.target.value)}
                         className="w-full text-xs font-mono text-center"
                         required
+                        disabled={createBomMutation.isPending}
                       />
                     </div>
 
@@ -322,7 +359,7 @@ export default function BoM() {
                     <button
                       type="button"
                       onClick={() => handleRemoveComponentRow(idx)}
-                      disabled={formComponents.length === 1}
+                      disabled={formComponents.length === 1 || createBomMutation.isPending}
                       className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
@@ -339,7 +376,8 @@ export default function BoM() {
                 <button
                   type="button"
                   onClick={handleAddOperationRow}
-                  className="text-[10px] bg-elevated hover:bg-card border border-border text-textPrimary px-2.5 py-1 rounded-custom font-semibold transition-all duration-150"
+                  disabled={createBomMutation.isPending}
+                  className="text-[10px] bg-elevated hover:bg-card border border-border text-textPrimary px-2.5 py-1 rounded-custom font-semibold transition-all duration-150 disabled:opacity-50"
                 >
                   + Add Operation
                 </button>
@@ -357,6 +395,7 @@ export default function BoM() {
                         onChange={(e) => handleOperationChange(idx, "operation_name", e.target.value)}
                         className="w-full text-xs"
                         required
+                        disabled={createBomMutation.isPending}
                       />
                     </div>
 
@@ -367,6 +406,7 @@ export default function BoM() {
                         onChange={(e) => handleOperationChange(idx, "work_center_id", e.target.value)}
                         className="w-full text-xs"
                         required
+                        disabled={createBomMutation.isPending}
                       >
                         {workCenters.map(wc => (
                           <option key={wc.id} value={wc.id}>{wc.name}</option>
@@ -384,6 +424,7 @@ export default function BoM() {
                         onChange={(e) => handleOperationChange(idx, "duration_minutes", e.target.value)}
                         className="w-full text-xs font-mono text-center"
                         required
+                        disabled={createBomMutation.isPending}
                       />
                     </div>
 
@@ -391,7 +432,7 @@ export default function BoM() {
                     <button
                       type="button"
                       onClick={() => handleRemoveOperationRow(idx)}
-                      disabled={formOperations.length === 1}
+                      disabled={formOperations.length === 1 || createBomMutation.isPending}
                       className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
@@ -412,9 +453,10 @@ export default function BoM() {
               </button>
               <button
                 type="submit"
-                className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150"
+                disabled={createBomMutation.isPending}
+                className="bg-accent hover:bg-accent/90 text-background text-xs rounded-custom py-2 px-6 font-semibold transition-all duration-150 disabled:opacity-50"
               >
-                Save Recipe
+                {createBomMutation.isPending ? "Saving..." : "Save Recipe"}
               </button>
             </div>
           </form>
@@ -446,9 +488,7 @@ export default function BoM() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {bomLines
-                        .filter(bl => bl.bom_id === selectedBom.id)
-                        .map(line => {
+                      {selectedBom.lines?.map(line => {
                           const compProd = products.find(p => p.id === line.component_product_id);
                           return (
                             <tr key={line.id} className="hover:bg-elevated/10">
@@ -491,6 +531,11 @@ export default function BoM() {
                             </tr>
                           );
                         })}
+                      {bomOperations.filter(bo => bo.bom_id === selectedBom.id).length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="py-4 text-center text-textMuted italic">No operations stored locally for this backend BoM yet.</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, Check, Loader2, KeyRound } from 'lucide-react';
+import { api } from '../api/client';
+
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return {};
+  }
+};
 
 export default function LoginPage({ onLogin, onBack, onSignup }) {
   const [email, setEmail] = useState('');
@@ -28,7 +42,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
     Customer: { email: 'customer@shivfurniture.com', password: 'customerpassword', role: 'Customer' }
   };
 
-  const handleDemoClick = (roleKey) => {
+  const handleDemoClick = async (roleKey) => {
     if (isLoading) return;
     const account = demoAccounts[roleKey];
     if (!account) return;
@@ -37,15 +51,26 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
     setEmail(account.email);
     setPassword(account.password);
 
-    // Simulate login loading delay for hackathon demo feel
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const params = new URLSearchParams();
+      params.append('username', account.email);
+      params.append('password', account.password);
+      
+      const res = await api.post('/auth/login', params);
+      localStorage.setItem('access_token', res.access_token);
       onLogin(account.role);
-    }, 600);
+    } catch (err) {
+      setErrors(prev => ({
+        ...prev,
+        general: 'Demo login failed: ' + err.message
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (isLoading) return;
 
@@ -76,26 +101,34 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
     setIsLoading(true);
     setErrors({ email: '', password: '', general: '' });
 
-    // Validate against demo credentials or allow fallback
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      // Match credentials
-      const foundDemo = Object.values(demoAccounts).find(
-        acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password
-      );
+    try {
+      const params = new URLSearchParams();
+      params.append('username', email);
+      params.append('password', password);
 
-      if (foundDemo) {
-        onLogin(foundDemo.role);
-      } else if (email === 'admin@admin.com' && password === 'admin') {
-        onLogin('StoreAdmin');
-      } else {
-        setErrors(prev => ({
-          ...prev,
-          general: 'Invalid email or password. Hint: Use demo access chips below.'
-        }));
+      const res = await api.post('/auth/login', params);
+      const token = res.access_token;
+      localStorage.setItem('access_token', token);
+      
+      const decoded = decodeJwt(token);
+      let role = decoded.role;
+      
+      if (!role) {
+        const foundDemo = Object.values(demoAccounts).find(
+          acc => acc.email.toLowerCase() === email.toLowerCase()
+        );
+        role = foundDemo ? foundDemo.role : 'StoreAdmin';
       }
-    }, 1000);
+      
+      onLogin(role);
+    } catch (err) {
+      setErrors(prev => ({
+        ...prev,
+        general: err.message || 'Invalid email or password.'
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

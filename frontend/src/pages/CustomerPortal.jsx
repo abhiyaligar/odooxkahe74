@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
 import { ThemeToggle } from '../components/common/ThemeToggle';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/client';
 import { 
   ShoppingBag, 
   ShoppingCart, 
@@ -15,18 +17,32 @@ import {
   MapPin, 
   Truck,
   ArrowLeft,
-  ShieldAlert
+  ShieldAlert,
+  Loader2
 } from 'lucide-react';
 
 export default function CustomerPortal() {
+  const queryClient = useQueryClient();
   const { 
-    products, 
-    salesOrders, 
-    salesOrderLines, 
     currentRole, 
-    setCurrentRole,
-    createSalesOrder
+    setCurrentRole
   } = useErpStore();
+
+  // Fetch data
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products/')
+  });
+
+  const { data: salesOrders = [], isLoading: isLoadingOrders } = useQuery({
+    queryKey: ['salesOrders'],
+    queryFn: () => api.get('/sales-orders/')
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => api.get('/customers/')
+  });
 
   // Navigation state
   const [currentTab, setCurrentTab] = useState("catalog"); // catalog, detail, cart, orders, track
@@ -47,8 +63,20 @@ export default function CustomerPortal() {
   // Show views switcher dropdown
   const [showViewDropdown, setShowViewDropdown] = useState(false);
 
-  // We act as logged-in customer "c3" (Vikas Homes)
-  const customerId = "c3";
+  // Determine a customer ID to use for the demo portal
+  const demoCustomer = customers.find(c => c.name.toLowerCase().includes("vikas")) || customers[0];
+  const customerId = demoCustomer ? demoCustomer.id : null;
+
+  const createSalesOrderMutation = useMutation({
+    mutationFn: (newOrder) => api.post('/sales-orders/', newOrder),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
+      setCart([]);
+      setSelectedOrder(data);
+      setCurrentTab("track");
+    },
+    onError: (err) => alert("Failed to create order: " + err.message)
+  });
 
   // SVG representation for products to replace placeholders
   const renderProductSvg = (name, className = "w-16 h-16 text-textSecondary") => {
@@ -86,8 +114,8 @@ export default function CustomerPortal() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Filter sales orders for customer "c3"
-  const customerOrders = salesOrders.filter(so => so.customer_id === customerId);
+  // Filter sales orders for customer
+  const customerOrders = customerId ? salesOrders.filter(so => so.customer_id === customerId) : [];
 
   // Status mapping: internal -> customer friendly
   const customerStatusLabels = {
@@ -134,7 +162,7 @@ export default function CustomerPortal() {
   };
 
   const getCartTotal = () => {
-    return cart.reduce((sum, item) => sum + (item.product.sales_price * item.quantity), 0);
+    return cart.reduce((sum, item) => sum + ((item.product.sales_price || 0) * item.quantity), 0);
   };
 
   const getCartItemCount = () => {
@@ -143,34 +171,26 @@ export default function CustomerPortal() {
 
   const handleCheckoutSubmit = (e) => {
     e.preventDefault();
-    if (cart.length === 0) return;
+    if (cart.length === 0 || !customerId) {
+      if (!customerId) alert("No customer available in the system. Create a customer in the ERP first.");
+      return;
+    }
 
     // Construct lines
     const lines = cart.map(item => ({
       product_id: item.product.id,
-      quantity: item.quantity,
-      unit_price: item.product.sales_price
+      quantity_ordered: item.quantity
     }));
 
     // Expect delivery 3 days from now
     const deliveryPromise = new Date();
     deliveryPromise.setDate(deliveryPromise.getDate() + 3);
 
-    // Call store action
-    const newSoId = createSalesOrder(customerId, deliveryPromise.toISOString(), lines);
-
-    // Clear cart and navigate
-    setCart([]);
-    
-    // Fetch newly created order to show details immediately
-    const state = useErpStore.getState();
-    const createdOrder = state.salesOrders.find(o => o.id === newSoId);
-    if (createdOrder) {
-      setSelectedOrder(createdOrder);
-      setCurrentTab("track");
-    } else {
-      setCurrentTab("orders");
-    }
+    createSalesOrderMutation.mutate({
+      customer_id: customerId,
+      expected_delivery_date: deliveryPromise.toISOString(),
+      lines: lines
+    });
   };
 
   // Track page horizontal stepper stages
@@ -330,61 +350,72 @@ export default function CustomerPortal() {
             </div>
 
             {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCatalog.map(p => {
-                const isMTO = p.procurement_strategy === "MTO";
-                return (
-                  <div 
-                    key={p.id}
-                    className="bg-card border border-border rounded-[8px] p-5 flex flex-col space-y-4 hover:border-textSecondary transition-all duration-150"
-                  >
-                    {/* Product Vector Image */}
+            {isLoadingProducts ? (
+              <div className="flex flex-col items-center justify-center py-12 text-textMuted">
+                <Loader2 className="animate-spin mb-4" size={32} />
+                <p className="text-sm font-mono">Loading catalog...</p>
+              </div>
+            ) : filteredCatalog.length === 0 ? (
+              <div className="border border-border bg-card rounded-[8px] p-8 text-center">
+                 <p className="text-xs text-textSecondary">No products available in the catalog yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredCatalog.map(p => {
+                  const isMTO = p.procurement_strategy === "MTO";
+                  return (
                     <div 
-                      onClick={() => {
-                        setSelectedProduct(p);
-                        setCurrentTab("detail");
-                      }}
-                      className="aspect-video w-full bg-elevated border border-border rounded-custom flex items-center justify-center cursor-pointer hover:bg-elevated/80 transition-colors"
+                      key={p.id}
+                      className="bg-card border border-border rounded-[8px] p-5 flex flex-col space-y-4 hover:border-textSecondary transition-all duration-150"
                     >
-                      {renderProductSvg(p.name, "w-12 h-12 text-textSecondary")}
-                    </div>
-
-                    <div className="space-y-1 flex-1">
-                      <div className="flex items-start justify-between">
-                        <h3 
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setCurrentTab("detail");
-                          }}
-                          className="font-bold text-sm text-textPrimary hover:underline cursor-pointer"
-                        >
-                          {p.name}
-                        </h3>
-                        <span className="text-sm font-extrabold font-mono text-textPrimary">${p.sales_price}</span>
-                      </div>
-                      <p className="text-[11px] text-textSecondary line-clamp-2 leading-relaxed">
-                        Handcrafted solid construction, styled with minimal geometries. Fits beautifully in modern offices and dining halls.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2">
-                      <span className={`inline-block text-[9px] font-bold uppercase rounded px-2 py-0.5 tracking-wider border font-mono ${
-                        isMTO ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' : 'border-statusGreen/40 text-statusGreen bg-statusGreen/5'
-                      }`}>
-                        {isMTO ? "Built to Order" : "In Stock"}
-                      </span>
-
-                      <button
-                        onClick={() => addToCart(p, 1)}
-                        className="bg-accent hover:bg-accent/90 text-background text-xs font-bold px-3 py-1.5 rounded-custom transition-colors duration-150"
+                      {/* Product Vector Image */}
+                      <div 
+                        onClick={() => {
+                          setSelectedProduct(p);
+                          setCurrentTab("detail");
+                        }}
+                        className="aspect-video w-full bg-elevated border border-border rounded-custom flex items-center justify-center cursor-pointer hover:bg-elevated/80 transition-colors"
                       >
-                        Add to Order
-                      </button>
+                        {renderProductSvg(p.name, "w-12 h-12 text-textSecondary")}
+                      </div>
+
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-start justify-between">
+                          <h3 
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setCurrentTab("detail");
+                            }}
+                            className="font-bold text-sm text-textPrimary hover:underline cursor-pointer"
+                          >
+                            {p.name}
+                          </h3>
+                          <span className="text-sm font-extrabold font-mono text-textPrimary">${(p.sales_price || 0).toFixed(2)}</span>
+                        </div>
+                        <p className="text-[11px] text-textSecondary line-clamp-2 leading-relaxed">
+                          Handcrafted solid construction, styled with minimal geometries. Fits beautifully in modern offices and dining halls.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <span className={`inline-block text-[9px] font-bold uppercase rounded px-2 py-0.5 tracking-wider border font-mono ${
+                          isMTO ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' : 'border-statusGreen/40 text-statusGreen bg-statusGreen/5'
+                        }`}>
+                          {isMTO ? "Built to Order" : "In Stock"}
+                        </span>
+
+                        <button
+                          onClick={() => addToCart(p, 1)}
+                          className="bg-accent hover:bg-accent/90 text-background text-xs font-bold px-3 py-1.5 rounded-custom transition-colors duration-150"
+                        >
+                          Add to Order
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -410,7 +441,7 @@ export default function CustomerPortal() {
                 <div className="space-y-2 border-b border-border pb-4">
                   <h2 className="text-2xl font-bold tracking-tight">{selectedProduct.name}</h2>
                   <div className="flex items-center space-x-4">
-                    <span className="text-xl font-extrabold font-mono text-accent">${selectedProduct.sales_price}</span>
+                    <span className="text-xl font-extrabold font-mono text-accent">${(selectedProduct.sales_price || 0).toFixed(2)}</span>
                     
                     {/* User Friendly Stock Message */}
                     <span className="flex items-center text-xs space-x-1">
@@ -476,7 +507,7 @@ export default function CustomerPortal() {
                     <div key={item.product.id} className="p-4 flex items-center justify-between text-xs">
                       <div className="space-y-1">
                         <span className="font-bold text-textPrimary">{item.product.name}</span>
-                        <span className="text-[10px] text-textSecondary font-mono block">${item.product.sales_price} / unit</span>
+                        <span className="text-[10px] text-textSecondary font-mono block">${(item.product.sales_price || 0).toFixed(2)} / unit</span>
                       </div>
 
                       <div className="flex items-center space-x-4">
@@ -501,7 +532,7 @@ export default function CustomerPortal() {
 
                         {/* Subtotal */}
                         <span className="font-mono font-bold text-textPrimary w-20 text-right">
-                          ${(item.product.sales_price * item.quantity).toFixed(2)}
+                          ${((item.product.sales_price || 0) * item.quantity).toFixed(2)}
                         </span>
 
                         {/* Remove */}
@@ -545,6 +576,7 @@ export default function CustomerPortal() {
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         className="bg-background text-xs py-2"
+                        disabled={createSalesOrderMutation.isPending}
                       />
                     </div>
 
@@ -555,15 +587,17 @@ export default function CustomerPortal() {
                         rows="2"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
+                        disabled={createSalesOrderMutation.isPending}
                         className="bg-background border border-border rounded-custom text-textPrimary px-3 py-1.5 text-xs focus:outline-none focus:border-accent resize-none transition-colors"
                       />
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full bg-accent hover:bg-accent/90 text-background font-bold text-xs py-2.5 rounded-custom transition-all duration-150"
+                      disabled={createSalesOrderMutation.isPending}
+                      className="w-full bg-accent hover:bg-accent/90 text-background font-bold text-xs py-2.5 rounded-custom transition-all duration-150 disabled:opacity-50"
                     >
-                      Place Order
+                      {createSalesOrderMutation.isPending ? 'Processing...' : 'Place Order'}
                     </button>
                   </form>
                 </div>
@@ -577,7 +611,12 @@ export default function CustomerPortal() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold tracking-tight">Your Order History</h2>
 
-            {customerOrders.length === 0 ? (
+            {isLoadingOrders ? (
+              <div className="flex flex-col items-center justify-center py-12 text-textMuted">
+                <Loader2 className="animate-spin mb-4" size={32} />
+                <p className="text-sm font-mono">Loading your orders...</p>
+              </div>
+            ) : customerOrders.length === 0 ? (
               <div className="border border-border bg-card rounded-[8px] p-8 text-center space-y-4">
                 <p className="text-xs text-textSecondary">You haven't placed any orders yet.</p>
                 <button
@@ -590,9 +629,9 @@ export default function CustomerPortal() {
             ) : (
               <div className="space-y-4">
                 {customerOrders.map(order => {
-                  const itemLines = salesOrderLines.filter(sol => sol.sales_order_id === order.id);
+                  const itemLines = order.lines || [];
                   const count = itemLines.reduce((sum, l) => sum + l.quantity_ordered, 0);
-                  const total = itemLines.reduce((sum, l) => sum + (l.quantity_ordered * l.unit_price), 0);
+                  const total = itemLines.reduce((sum, l) => sum + (l.quantity_ordered * (l.unit_price || 0)), 0);
 
                   return (
                     <div 
@@ -616,9 +655,9 @@ export default function CustomerPortal() {
                       <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                         {/* Friendly Status Badge */}
                         <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
-                          customerStatusColors[order.status]
+                          customerStatusColors[order.status] || ''
                         }`}>
-                          {customerStatusLabels[order.status]}
+                          {customerStatusLabels[order.status] || order.status}
                         </span>
                         <ChevronRight size={16} className="text-textSecondary" />
                       </div>
@@ -650,9 +689,9 @@ export default function CustomerPortal() {
               <div className="bg-card border border-border rounded-[8px] p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold tracking-tight text-textPrimary">
-                    Order Status: {customerStatusLabels[selectedOrder.status]}
+                    Order Status: {customerStatusLabels[selectedOrder.status] || selectedOrder.status}
                   </h3>
-                  <span className="text-[10px] font-mono text-textSecondary">Expected Delivery: {new Date(selectedOrder.expected_delivery_date).toLocaleDateString()}</span>
+                  <span className="text-[10px] font-mono text-textSecondary">Expected Delivery: {selectedOrder.expected_delivery_date ? new Date(selectedOrder.expected_delivery_date).toLocaleDateString() : 'Pending'}</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans text-textSecondary leading-relaxed">
@@ -688,17 +727,15 @@ export default function CustomerPortal() {
                       </tr>
                     </thead>
                     <tbody>
-                      {salesOrderLines
-                        .filter(l => l.sales_order_id === selectedOrder.id)
-                        .map(line => {
+                      {(selectedOrder.lines || []).map(line => {
                           const prod = products.find(p => p.id === line.product_id);
                           return (
                             <tr key={line.id} className="border-b border-border/40 last:border-0 hover:bg-elevated/10 transition-colors">
                               <td className="py-2 px-3 text-textPrimary font-semibold">{prod?.name || 'Unknown Item'}</td>
                               <td className="py-2 px-3 text-right text-textSecondary font-mono">{line.quantity_ordered}</td>
-                              <td className="py-2 px-3 text-right text-textSecondary font-mono">${line.unit_price}</td>
+                              <td className="py-2 px-3 text-right text-textSecondary font-mono">${(line.unit_price || 0).toFixed(2)}</td>
                               <td className="py-2 px-3 text-right text-textPrimary font-bold font-mono">
-                                ${(line.quantity_ordered * line.unit_price).toFixed(2)}
+                                ${(line.quantity_ordered * (line.unit_price || 0)).toFixed(2)}
                               </td>
                             </tr>
                           );

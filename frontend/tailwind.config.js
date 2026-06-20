@@ -25,7 +25,11 @@ export default {
         custom: "6px",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans: ["var(--font-secondary)"],
+        primary: ["var(--font-primary)"],
+        secondary: ["var(--font-secondary)"],
+        tertiary: ["var(--font-tertiary)"],
+        mono: ["var(--font-tertiary)"],
       },
     },
   },

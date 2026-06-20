@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useErpStore } from '../store/erpStore';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
 import { SlideOver } from '../components/common/SlideOver';
 import { 
   Plus, 
@@ -18,9 +20,9 @@ export default function Manufacturing() {
   const { 
     manufacturingOrders, 
     workOrders, 
-    products, 
-    boms, 
     workCenters, 
+    bomOperations,
+    bomLines,
     currentRole,
     createManufacturingOrder,
     confirmManufacturingOrder,
@@ -35,6 +37,16 @@ export default function Manufacturing() {
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => api.get('/products/')
+  });
+
+  const { data: boms = [] } = useQuery({
+    queryKey: ['boms'],
+    queryFn: () => api.get('/boms/')
+  });
 
   // Create Form States
   const [productSelect, setProductSelect] = useState("");
