@@ -18,6 +18,7 @@ import {
   User,
   Users,
   UserPlus,
+  UserCheck,
   Activity,
   LogOut,
   Menu,
@@ -104,6 +105,12 @@ export const Layout = ({ children }) => {
       name: "Vendors",
       path: "/vendors",
       icon: Users,
+      roles: ["SuperAdmin", "StoreAdmin"]
+    },
+    {
+      name: "Customers",
+      path: "/customers",
+      icon: UserCheck,
       roles: ["SuperAdmin", "StoreAdmin"]
     },
     {

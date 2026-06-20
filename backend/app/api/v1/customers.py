@@ -12,7 +12,7 @@ from app.api.dependencies import get_current_user, RoleChecker
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
 admin_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin])
-read_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin, UserRole.SalesUser])
+read_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin])
 
 @router.post("/", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_checker)])
 async def create_customer(customer_in: CustomerCreate, db: AsyncSession = Depends(get_db)):
