@@ -88,3 +88,69 @@ async def list_users(
         )
     result = await db.execute(select(User).order_by(User.name))
     return result.scalars().all()
+
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user_by_admin(
+    user_in: UserCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.role not in [UserRole.SuperAdmin, UserRole.StoreAdmin]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrator roles are permitted to create users."
+        )
+
+    if current_user.role == UserRole.StoreAdmin and user_in.role == UserRole.SuperAdmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="StoreAdmins are not permitted to create SuperAdmin profiles."
+        )
+
+    result = await db.execute(select(User).where(User.email == user_in.email))
+    user = result.scalars().first()
+    if user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = get_password_hash(user_in.password)
+    db_user = User(
+        name=user_in.name,
+        email=user_in.email,
+        password_hash=hashed_password,
+        role=user_in.role
+    )
+    db.add(db_user)
+    await db.flush()
+    
+    if user_in.role == UserRole.Customer:
+        db_customer = Customer(
+            id=db_user.id,
+            name=user_in.name,
+            email=user_in.email,
+            phone=user_in.phone,
+            address=user_in.address,
+            category=CustomerCategory.Retail
+        )
+        db.add(db_customer)
+        
+    from app.services.audit import log_action
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Auth",
+        record_type="User",
+        record_id=db_user.id,
+        action="Create",
+        field_changed="role",
+        old_val=None,
+        new_val=db_user.role.value if hasattr(db_user.role, 'value') else str(db_user.role)
+    )
+    
+    await db.commit()
+    await db.refresh(db_user)
+    
+    if db_user.role == UserRole.Customer:
+        cust_res = await db.execute(select(Customer).where(Customer.id == db_user.id))
+        db_user.customer_profile = cust_res.scalars().first()
+        
+    return db_user

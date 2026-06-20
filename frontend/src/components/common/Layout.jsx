@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   User,
   Users,
+  UserPlus,
   Activity
 } from 'lucide-react';
 
@@ -93,10 +94,16 @@ export const Layout = ({ children }) => {
       roles: ["SuperAdmin", "StoreAdmin"]
     },
     { 
+      name: "Users", 
+      path: "/users", 
+      icon: UserPlus,
+      roles: ["SuperAdmin", "StoreAdmin"]
+    },
+    { 
       name: "Audit Logs", 
       path: "/audit-logs", 
       icon: Activity,
-      roles: ["SuperAdmin"]
+      roles: ["SuperAdmin", "StoreAdmin"]
     }
   ];
 

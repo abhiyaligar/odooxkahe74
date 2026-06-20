@@ -117,3 +117,125 @@ async def test_long_password_handling(client: AsyncClient):
     response = await client.post("/api/v1/auth/login", data=login_data)
     assert response.status_code == 200
     assert "access_token" in response.json()
+
+async def test_create_user_by_superadmin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_superadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Super",
+            email="super@example.com",
+            role=UserRole.SuperAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_superadmin
+
+    try:
+        user_data = {
+            "name": "Created Admin",
+            "email": "createdadmin@example.com",
+            "password": "password123",
+            "role": "StoreAdmin"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 201
+        res_json = response.json()
+        assert res_json["email"] == "createdadmin@example.com"
+        assert res_json["role"] == "StoreAdmin"
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_create_user_by_storeadmin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_storeadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Store",
+            email="store@example.com",
+            role=UserRole.StoreAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_storeadmin
+
+    try:
+        user_data = {
+            "name": "Created Customer",
+            "email": "createdcust@example.com",
+            "password": "password123",
+            "role": "Customer",
+            "phone": "12345678",
+            "address": "Some address"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 201
+        res_json = response.json()
+        assert res_json["email"] == "createdcust@example.com"
+        assert res_json["role"] == "Customer"
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_create_superadmin_by_storeadmin_forbidden(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_storeadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Store",
+            email="store2@example.com",
+            role=UserRole.StoreAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_storeadmin
+
+    try:
+        user_data = {
+            "name": "Created Super",
+            "email": "createdsuper@example.com",
+            "password": "password123",
+            "role": "SuperAdmin"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 403
+        assert "StoreAdmins are not permitted to create SuperAdmin profiles" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_create_user_by_salesuser_forbidden(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_sales():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Sales",
+            email="sales@example.com",
+            role=UserRole.SalesUser,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_sales
+
+    try:
+        user_data = {
+            "name": "Any User",
+            "email": "anyuser@example.com",
+            "password": "password123",
+            "role": "SalesUser"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 403
+        assert "Only administrator roles are permitted to create users" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
