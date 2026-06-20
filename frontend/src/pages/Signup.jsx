@@ -3,7 +3,7 @@ import { Eye, EyeOff, Check, Loader2, ShoppingBag, Store, AlertCircle } from 'lu
 import { api } from '../api/client';
 
 export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHome }) {
-  const [role, setRole] = useState(null); // 'Customer' or 'StoreAdmin'
+  const [role, setRole] = useState('Customer'); // only Customer signup allowed
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,13 +17,6 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
   // Conditional fields state
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [staffRole, setStaffRole] = useState('Admin'); // default for StoreAdmin
-
-  const handleRoleSelect = (selectedRole) => {
-    if (isLoading) return;
-    setRole(selectedRole);
-    setErrors({});
-  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -44,14 +37,12 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    if (role === 'Customer') {
-      if (!phone) {
-        newErrors.phone = 'Phone number is required';
-      } else if (!/^\d{10}$/.test(phone)) {
-        newErrors.phone = 'Phone number must be exactly 10 digits';
-      }
-      if (!address) newErrors.address = 'Delivery address is required';
+    if (!phone) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^\d{10}$/.test(phone)) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
     }
+    if (!address) newErrors.address = 'Delivery address is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -59,7 +50,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLoading || !role || !agreeTerms) return;
+    if (isLoading || !agreeTerms) return;
 
     if (!validateForm()) return;
 
@@ -67,23 +58,17 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
     setErrors({});
     
     try {
-      const finalRole = role === 'Customer' ? 'Customer' : staffRole === 'Admin' ? 'StoreAdmin' : staffRole;
-      
       const signupPayload = {
         name,
         email,
         password,
-        role: finalRole,
+        role: 'Customer',
+        phone,
+        address,
       };
-      if (role === 'Customer') {
-        signupPayload.phone = phone;
-        signupPayload.address = address;
-      }
 
       await api.post('/auth/signup', signupPayload);
       
-      // Auto-login after signup, or just redirect to login (the app logic currently passes role to onSignupSuccess which does a mock login)
-      // Since it's better to login via the API to get the token, we will call login API.
       const params = new URLSearchParams();
       params.append('username', email);
       params.append('password', password);
@@ -91,7 +76,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
       const res = await api.post('/auth/login', params);
       localStorage.setItem('access_token', res.access_token);
       
-      onSignupSuccess(finalRole);
+      onSignupSuccess('Customer');
     } catch (err) {
       setErrors({ general: err.message || 'Signup failed' });
     } finally {
@@ -125,54 +110,6 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
           <p className="text-[10px] uppercase tracking-widest text-textSecondary font-semibold">Create your account</p>
         </div>
 
-        {/* Role Selection Cards */}
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider block">Account Type</label>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Customer option */}
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleRoleSelect('Customer')}
-              className={`p-4 border rounded-custom flex flex-col items-center text-center space-y-2 transition-all duration-150 ${
-                role === 'Customer'
-                  ? 'border-accent bg-elevated/40 text-textPrimary shadow-lg'
-                  : 'border-border bg-background hover:bg-elevated/20 text-textSecondary hover:text-textPrimary'
-              }`}
-            >
-              <ShoppingBag size={20} className={role === 'Customer' ? 'text-textPrimary' : 'text-textSecondary'} />
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold block">Customer</span>
-                <span className="text-[9px] text-textMuted font-medium block">Order furniture</span>
-              </div>
-            </button>
-
-            {/* Store Admin option */}
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleRoleSelect('StoreAdmin')}
-              className={`p-4 border rounded-custom flex flex-col items-center text-center space-y-2 transition-all duration-150 ${
-                role === 'StoreAdmin'
-                  ? 'border-accent bg-elevated/40 text-textPrimary shadow-lg'
-                  : 'border-border bg-background hover:bg-elevated/20 text-textSecondary hover:text-textPrimary'
-              }`}
-            >
-              <Store size={20} className={role === 'StoreAdmin' ? 'text-textPrimary' : 'text-textSecondary'} />
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold block">Store Admin</span>
-                <span className="text-[9px] text-textMuted font-medium block">Manage ERP ops</span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Dynamic Form Render */}
-        {!role ? (
-          <div className="bg-card border border-border border-dashed p-6 rounded-custom text-center text-xs text-textMuted">
-            Select an account type to continue
-          </div>
-        ) : (
           <form onSubmit={handleSubmit} className="space-y-4 animate-all-custom transition-all duration-150">
             
             {errors.general && (
@@ -275,71 +212,45 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
               </div>
             </div>
 
-            {/* CONDITIONAL FIELDS: CUSTOMER */}
-            {role === 'Customer' && (
-              <div className="space-y-4 pt-1">
-                {/* Phone */}
-                <div className="flex flex-col space-y-1">
-                  <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Phone Number</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 1234567890"
-                    disabled={isLoading}
-                    value={phone}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      setPhone(val);
-                    }}
-                    className={`w-full bg-card border text-xs py-2 ${
-                      errors.phone ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
-                    }`}
-                    required
-                  />
-                  {errors.phone && <span className="text-[9px] text-danger font-mono">{errors.phone}</span>}
-                </div>
-
-                {/* Delivery Address */}
-                <div className="flex flex-col space-y-1">
-                  <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Delivery Address</label>
-                  <textarea
-                    placeholder="Full shipping address details..."
-                    disabled={isLoading}
-                    rows="2"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className={`w-full bg-card border text-xs py-2 px-3 focus:outline-none rounded-custom resize-none focus:border-accent ${
-                      errors.address ? 'border-danger focus:border-danger' : 'border-border'
-                    }`}
-                    required
-                  />
-                  {errors.address && <span className="text-[9px] text-danger font-mono">{errors.address}</span>}
-                </div>
+            {/* Customer Fields (Phone and Address always rendered) */}
+            <div className="space-y-4 pt-1">
+              {/* Phone */}
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Phone Number</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 1234567890"
+                  disabled={isLoading}
+                  value={phone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setPhone(val);
+                  }}
+                  className={`w-full bg-card border text-xs py-2 ${
+                    errors.phone ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
+                  }`}
+                  required
+                />
+                {errors.phone && <span className="text-[9px] text-danger font-mono">{errors.phone}</span>}
               </div>
-            )}
 
-            {/* CONDITIONAL FIELDS: STORE ADMIN */}
-            {role === 'StoreAdmin' && (
-              <div className="space-y-4 pt-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Staff Role selection */}
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Staff Role</label>
-                    <select
-                      disabled={isLoading}
-                      value={staffRole}
-                      onChange={(e) => setStaffRole(e.target.value)}
-                      className="w-full text-xs"
-                    >
-                      <option value="StoreAdmin">Store Admin</option>
-                      <option value="SalesUser">Sales User</option>
-                      <option value="PurchaseUser">Purchase User</option>
-                      <option value="ManufacturingUser">Manufacturing User</option>
-                      <option value="InventoryManager">Inventory Manager</option>
-                    </select>
-                  </div>
-                </div>
+              {/* Delivery Address */}
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Delivery Address</label>
+                <textarea
+                  placeholder="Full shipping address details..."
+                  disabled={isLoading}
+                  rows="2"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className={`w-full bg-card border text-xs py-2 px-3 focus:outline-none rounded-custom resize-none focus:border-accent ${
+                    errors.address ? 'border-danger focus:border-danger' : 'border-border'
+                  }`}
+                  required
+                />
+                {errors.address && <span className="text-[9px] text-danger font-mono">{errors.address}</span>}
               </div>
-            )}
+            </div>
 
             {/* Terms and conditions checkbox */}
             <div className="flex items-start space-x-2 pt-2">
@@ -370,9 +281,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                   <span>Registering...</span>
                 </div>
               ) : (
-                <span>
-                  {role === 'Customer' ? 'Create Customer Account' : 'Create Store Admin Account'}
-                </span>
+                <span>Create Customer Account</span>
               )}
             </button>
 
@@ -389,7 +298,6 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
             </div>
 
           </form>
-        )}
 
       </div>
     </div>
