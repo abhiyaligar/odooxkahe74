@@ -5,7 +5,7 @@ import { Plus, Check, Layers, AlertCircle, Loader2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 
-export default function BoM() {
+export default function Recipes() {
   const queryClient = useQueryClient();
   const { 
     bomOperations, 
@@ -22,7 +22,7 @@ export default function BoM() {
 
   // Create Form States
   const [productSelect, setProductSelect] = useState("");
-  const [bomName, setBomName] = useState("");
+  const [recipeName, setBomName] = useState("");
   const [versionSelect, setVersionSelect] = useState("v1");
   const [formComponents, setFormComponents] = useState([
     { component_product_id: "", quantity_required: 1 }
@@ -35,9 +35,9 @@ export default function BoM() {
   const canModify = currentRole === "SuperAdmin" || currentRole === "StoreAdmin";
 
   // Fetch data
-  const { data: boms = [], isLoading: isLoadingBoms } = useQuery({
-    queryKey: ['boms'],
-    queryFn: () => api.get('/boms/')
+  const { data: recipes = [], isLoading: isLoadingBoms } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: () => api.get('/recipes/')
   });
 
   const { data: products = [] } = useQuery({
@@ -47,9 +47,9 @@ export default function BoM() {
 
   // Mutations
   const createBomMutation = useMutation({
-    mutationFn: (newBom) => api.post('/boms/', newBom),
+    mutationFn: (newBom) => api.post('/recipes/', newBom),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['boms'] });
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
       
       // Optionally store operations locally if needed
       // useErpStore.getState().addBomOperations(data.id, formOperations);
@@ -60,23 +60,23 @@ export default function BoM() {
   });
 
 
-  // Filter boms based on parent product name
-  const filteredBoms = boms.filter(bom => {
-    const product = products.find(p => p.id === bom.product_id);
-    return bom.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  // Filter recipes based on parent product name
+  const filteredBoms = recipes.filter(recipe => {
+    const product = products.find(p => p.id === recipe.product_id);
+    return recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
            (product && product.name.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
-  const getComponentCount = (bom) => {
-    return bom.lines?.length || 0;
+  const getComponentCount = (recipe) => {
+    return recipe.lines?.length || 0;
   };
 
-  const getOperationCount = (bomId) => {
-    return bomOperations.filter(bo => bo.bom_id === bomId).length;
+  const getOperationCount = (recipeId) => {
+    return bomOperations.filter(bo => bo.bom_id === recipeId).length;
   };
 
-  const handleRowClick = (bom) => {
-    setSelectedBom(bom);
+  const handleRowClick = (recipe) => {
+    setSelectedBom(recipe);
     setIsCreating(false);
     setErrorMessage("");
     setIsSlideOverOpen(true);
@@ -88,7 +88,7 @@ export default function BoM() {
     setSelectedBom(null);
     setErrorMessage("");
     
-    // Find first finished good that does NOT have a BoM currently
+    // Find first finished good that does NOT have a Recipes currently
     const productsWithoutBom = products.filter(p => p.type === "FinishedGood" && !p.bom_id);
     setProductSelect(productsWithoutBom[0]?.id || products.find(p => p.type === "FinishedGood")?.id || "");
     setBomName("");
@@ -160,7 +160,7 @@ export default function BoM() {
 
     createBomMutation.mutate({
       product_id: productSelect,
-      name: bomName,
+      name: recipeName,
       version: versionSelect,
       lines: formComponents.map(c => ({
         component_product_id: c.component_product_id,
@@ -176,7 +176,7 @@ export default function BoM() {
         <div className="w-full sm:w-80">
           <input
             type="text"
-            placeholder="Search BoMs (Recipe Name or Product)..."
+            placeholder="Search Recipess (Recipe Name or Product)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-card border border-border rounded-custom py-1.5 px-3 text-xs focus:outline-none"
@@ -189,12 +189,12 @@ export default function BoM() {
             className="flex items-center space-x-1.5 bg-accent hover:bg-accent/90 text-background rounded-custom px-4 py-2 text-xs font-semibold transition-all duration-150 shrink-0 shadow-lg"
           >
             <Plus size={14} strokeWidth={2.5} />
-            <span>New BoM</span>
+            <span>New Recipes</span>
           </button>
         )}
       </div>
 
-      {/* BoMs Data Table */}
+      {/* Recipess Data Table */}
       <div className="w-full border border-border bg-card rounded-custom overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
@@ -212,7 +212,7 @@ export default function BoM() {
                <tr>
                <td colSpan="6" className="py-8 text-center text-textMuted font-mono">
                  <Loader2 className="animate-spin mx-auto mb-2" size={24} />
-                 Loading BoMs...
+                 Loading Recipess...
                </td>
              </tr>
             ) : filteredBoms.length === 0 ? (
@@ -222,23 +222,23 @@ export default function BoM() {
                 </td>
               </tr>
             ) : (
-              filteredBoms.map((bom) => {
-                const product = products.find(p => p.id === bom.product_id);
-                const compCount = getComponentCount(bom);
-                const opCount = getOperationCount(bom.id);
+              filteredBoms.map((recipe) => {
+                const product = products.find(p => p.id === recipe.product_id);
+                const compCount = getComponentCount(recipe);
+                const opCount = getOperationCount(recipe.id);
                 
                 return (
                   <tr 
-                    key={bom.id}
-                    onClick={() => handleRowClick(bom)}
+                    key={recipe.id}
+                    onClick={() => handleRowClick(recipe)}
                     className="hover:bg-elevated/30 cursor-pointer transition-colors duration-150"
                   >
-                    <td className="py-3 px-4 font-semibold text-textPrimary">{bom.name}</td>
+                    <td className="py-3 px-4 font-semibold text-textPrimary">{recipe.name}</td>
                     <td className="py-3 px-4 text-textSecondary">{product ? product.name : 'Unknown'}</td>
-                    <td className="py-3 px-4 font-mono text-textSecondary">{bom.version}</td>
+                    <td className="py-3 px-4 font-mono text-textSecondary">{recipe.version}</td>
                     <td className="py-3 px-4 text-center font-mono font-medium">{compCount} Component(s)</td>
                     <td className="py-3 px-4 text-center font-mono font-medium">{opCount} Step(s)</td>
-                    <td className="py-3 px-4 text-textSecondary">{new Date(bom.created_at).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-textSecondary">{new Date(recipe.created_at).toLocaleDateString()}</td>
                   </tr>
                 );
               })
@@ -299,9 +299,9 @@ export default function BoM() {
               <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Recipe Friendly Name</label>
               <input 
                 type="text" 
-                value={bomName} 
+                value={recipeName} 
                 onChange={(e) => setBomName(e.target.value)}
-                placeholder="e.g. Dining Table Premium BoM"
+                placeholder="e.g. Dining Table Premium Recipes"
                 disabled={createBomMutation.isPending}
                 required
               />
@@ -533,7 +533,7 @@ export default function BoM() {
                         })}
                       {bomOperations.filter(bo => bo.bom_id === selectedBom.id).length === 0 && (
                         <tr>
-                          <td colSpan="4" className="py-4 text-center text-textMuted italic">No operations stored locally for this backend BoM yet.</td>
+                          <td colSpan="4" className="py-4 text-center text-textMuted italic">No operations stored locally for this backend Recipes yet.</td>
                         </tr>
                       )}
                     </tbody>

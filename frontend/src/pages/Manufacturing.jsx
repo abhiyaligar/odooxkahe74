@@ -43,9 +43,9 @@ export default function Manufacturing() {
     queryFn: () => api.get('/products/')
   });
 
-  const { data: boms = [] } = useQuery({
-    queryKey: ['boms'],
-    queryFn: () => api.get('/boms/')
+  const { data: recipes = [] } = useQuery({
+    queryKey: ['recipes'],
+    queryFn: () => api.get('/recipes/')
   });
 
   // Create Form States
@@ -89,7 +89,7 @@ export default function Manufacturing() {
 
     const prod = products.find(p => p.id === productSelect);
     if (!prod || !prod.bom_id) {
-      setErrorMessage("The selected product does not have a Bill of Materials recipe. Please configure a BoM first.");
+      setErrorMessage("The selected product does not have a Recipe. Please configure a Recipe first.");
       return;
     }
 
@@ -275,7 +275,7 @@ export default function Manufacturing() {
                 const fgProduct = products.find(p => p.id === mo.product_id);
                 
                 // Calculate estimated duration
-                const bomRecord = boms.find(b => b.id === mo.bom_id);
+                const bomRecord = recipes.find(b => b.id === mo.bom_id);
                 const opSteps = bomOperations.filter(bo => bo.bom_id === bomRecord?.id);
                 const totalMinutes = opSteps.reduce((sum, op) => sum + (op.duration_minutes * mo.quantity_to_produce), 0);
 
@@ -320,7 +320,7 @@ export default function Manufacturing() {
         isOpen={isSlideOverOpen}
         onClose={() => setIsSlideOverOpen(false)}
         title={isCreating ? "New Manufacturing Order" : `Manufacturing Order Details: ${selectedMo?.order_number}`}
-        subtitle={isCreating ? "Initiate assembly process cycle" : `Associated BoM Recipe: ${selectedMo?.bom_id}`}
+        subtitle={isCreating ? "Initiate assembly process cycle" : `Associated Recipe: ${selectedMo?.bom_id}`}
       >
         {isCreating ? (
           /* CREATE MANUFACTURING ORDER */
@@ -515,7 +515,7 @@ export default function Manufacturing() {
                             const wcName = workCenters.find(w => w.id === wo.work_center_id)?.name || 'Unknown';
                             
                             // Find matching BoM operation step duration
-                            const bomRecord = boms.find(b => b.id === selectedMo.bom_id);
+                            const bomRecord = recipes.find(b => b.id === selectedMo.bom_id);
                             const matchedOp = bomOperations.find(bo => bo.bom_id === bomRecord?.id && bo.operation_name === wo.operation_name);
                             const duration = matchedOp ? matchedOp.duration_minutes * selectedMo.quantity_to_produce : 0;
 
