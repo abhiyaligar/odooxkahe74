@@ -4,7 +4,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.pg_models import Product, ProductType, ProcurementStrategy, BoM, BoMLine, User, UserRole
+from app.models.pg_models import Product, ProductType, ProcurementStrategy, BoM, BoMLine, WorkCenter, User, UserRole
 
 pytestmark = pytest.mark.asyncio
 
@@ -207,3 +207,45 @@ async def test_non_admin_cannot_create_recipe(client: AsyncClient, finished_good
         assert "permission to access this resource" in response.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+@pytest.fixture
+async def sample_work_center(db_session: AsyncSession) -> WorkCenter:
+    wc = WorkCenter(
+        id=uuid.uuid4(),
+        name="Wood Shop"
+    )
+    db_session.add(wc)
+    await db_session.commit()
+    await db_session.refresh(wc)
+    return wc
+
+async def test_create_recipe_with_operations_success(client: AsyncClient, finished_good_product: Product, component_product_1: Product, sample_work_center: WorkCenter):
+    payload = {
+        "product_id": str(finished_good_product.id),
+        "name": "Cabinet with Assembly Recipe",
+        "version": "1.0",
+        "lines": [
+            {
+                "component_product_id": str(component_product_1.id),
+                "quantity_required": 2.0
+            }
+        ],
+        "operations": [
+            {
+                "operation_name": "Assembly",
+                "sequence": 1,
+                "duration_minutes": 15,
+                "work_center_id": str(sample_work_center.id)
+            }
+        ]
+    }
+    
+    response = await client.post("/api/v1/recipes/", json=payload)
+    assert response.status_code == 201
+    res_json = response.json()
+    assert res_json["name"] == "Cabinet with Assembly Recipe"
+    assert len(res_json["operations"]) == 1
+    assert res_json["operations"][0]["operation_name"] == "Assembly"
+    assert res_json["operations"][0]["duration_minutes"] == 15
+    assert res_json["operations"][0]["work_center_id"] == str(sample_work_center.id)
+

@@ -6,7 +6,7 @@ from typing import List
 from uuid import UUID
 
 from app.db.session import get_db
-from app.models.pg_models import BoM, BoMLine, Product, ProductType, ManufacturingOrder, ManufacturingOrderStatus, User, UserRole
+from app.models.pg_models import BoM, BoMLine, BoMOperation, Product, ProductType, ManufacturingOrder, ManufacturingOrderStatus, User, UserRole
 from app.schemas.recipe import RecipeCreate, RecipeUpdate, RecipeResponse
 from app.api.dependencies import get_current_user, RoleChecker
 
@@ -108,19 +108,30 @@ async def create_recipe(recipe_in: RecipeCreate, db: AsyncSession = Depends(get_
         )
         db.add(db_line)
         
+    # 6. Create BoMOperations
+    for op in recipe_in.operations:
+        db_op = BoMOperation(
+            bom_id=db_bom.id,
+            operation_name=op.operation_name,
+            sequence=op.sequence,
+            duration_minutes=op.duration_minutes,
+            work_center_id=op.work_center_id
+        )
+        db.add(db_op)
+        
     await db.commit()
     
-    # Reload with preloaded lines
+    # Reload with preloaded lines and operations
     res = await db.execute(
         select(BoM)
-        .options(selectinload(BoM.lines))
+        .options(selectinload(BoM.lines), selectinload(BoM.operations))
         .where(BoM.id == db_bom.id)
     )
     return res.scalars().first()
 
 @router.get("/", response_model=List[RecipeResponse])
 async def list_recipes(product_id: UUID | None = None, skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    query = select(BoM).options(selectinload(BoM.lines))
+    query = select(BoM).options(selectinload(BoM.lines), selectinload(BoM.operations))
     if product_id:
         query = query.where(BoM.product_id == product_id)
     result = await db.execute(query.offset(skip).limit(limit))
@@ -129,7 +140,7 @@ async def list_recipes(product_id: UUID | None = None, skip: int = 0, limit: int
 @router.get("/{recipe_id}", response_model=RecipeResponse)
 async def get_recipe(recipe_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(BoM).options(selectinload(BoM.lines)).where(BoM.id == recipe_id)
+        select(BoM).options(selectinload(BoM.lines), selectinload(BoM.operations)).where(BoM.id == recipe_id)
     )
     bom = result.scalars().first()
     if not bom:
@@ -140,7 +151,9 @@ async def get_recipe(recipe_id: UUID, db: AsyncSession = Depends(get_db)):
 async def update_recipe(recipe_id: UUID, recipe_in: RecipeUpdate, db: AsyncSession = Depends(get_db)):
     # 1. Fetch BoM
     result = await db.execute(
-        select(BoM).options(selectinload(BoM.lines)).where(BoM.id == recipe_id)
+        select(BoM)
+        .options(selectinload(BoM.lines), selectinload(BoM.operations))
+        .where(BoM.id == recipe_id)
     )
     db_bom = result.scalars().first()
     if not db_bom:
@@ -189,12 +202,25 @@ async def update_recipe(recipe_id: UUID, recipe_in: RecipeUpdate, db: AsyncSessi
             )
             db_bom.lines.append(db_line)
             
+    # 4. Update operations if provided
+    if recipe_in.operations is not None:
+        db_bom.operations.clear()
+        for op in recipe_in.operations:
+            db_op = BoMOperation(
+                bom_id=db_bom.id,
+                operation_name=op.operation_name,
+                sequence=op.sequence,
+                duration_minutes=op.duration_minutes,
+                work_center_id=op.work_center_id
+            )
+            db_bom.operations.append(db_op)
+            
     await db.commit()
     
-    # Reload with preloaded lines
+    # Reload with preloaded lines and operations
     res = await db.execute(
         select(BoM)
-        .options(selectinload(BoM.lines))
+        .options(selectinload(BoM.lines), selectinload(BoM.operations))
         .where(BoM.id == db_bom.id)
     )
     return res.scalars().first()

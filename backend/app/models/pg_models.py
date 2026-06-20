@@ -70,6 +70,7 @@ class BoM(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     lines = relationship("BoMLine", back_populates="bom", cascade="all, delete-orphan")
+    operations = relationship("BoMOperation", cascade="all, delete-orphan")
     product = relationship("Product", foreign_keys=[product_id], primaryjoin="BoM.product_id == Product.id")
 
 class BoMLine(Base):

@@ -8,10 +8,8 @@ import { api } from '../api/client';
 export default function Recipes() {
   const queryClient = useQueryClient();
   const { 
-    bomOperations, 
     workCenters, 
-    currentRole,
-    addBomOperations // We will need to define this or just skip storing operations locally
+    currentRole
   } = useErpStore();
 
   const [selectedBom, setSelectedBom] = useState(null);
@@ -71,8 +69,8 @@ export default function Recipes() {
     return recipe.lines?.length || 0;
   };
 
-  const getOperationCount = (recipeId) => {
-    return bomOperations.filter(bo => bo.bom_id === recipeId).length;
+  const getOperationCount = (recipe) => {
+    return recipe.operations?.length || 0;
   };
 
   const handleRowClick = (recipe) => {
@@ -165,6 +163,12 @@ export default function Recipes() {
       lines: formComponents.map(c => ({
         component_product_id: c.component_product_id,
         quantity_required: Number(c.quantity_required)
+      })),
+      operations: formOperations.map((op, idx) => ({
+        operation_name: op.operation_name,
+        sequence: idx + 1,
+        duration_minutes: Number(op.duration_minutes),
+        work_center_id: op.work_center_id
       }))
     });
   };
@@ -225,7 +229,7 @@ export default function Recipes() {
               filteredBoms.map((recipe) => {
                 const product = products.find(p => p.id === recipe.product_id);
                 const compCount = getComponentCount(recipe);
-                const opCount = getOperationCount(recipe.id);
+                const opCount = getOperationCount(recipe);
                 
                 return (
                   <tr 
@@ -517,8 +521,7 @@ export default function Recipes() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {bomOperations
-                        .filter(bo => bo.bom_id === selectedBom.id)
+                       {(selectedBom.operations || [])
                         .sort((a, b) => a.sequence - b.sequence)
                         .map(op => {
                           const wcName = workCenters.find(w => w.id === op.work_center_id)?.name || 'Unknown';
@@ -531,9 +534,9 @@ export default function Recipes() {
                             </tr>
                           );
                         })}
-                      {bomOperations.filter(bo => bo.bom_id === selectedBom.id).length === 0 && (
+                      {(selectedBom.operations || []).length === 0 && (
                         <tr>
-                          <td colSpan="4" className="py-4 text-center text-textMuted italic">No operations stored locally for this backend Recipes yet.</td>
+                          <td colSpan="4" className="py-4 text-center text-textMuted italic">No operations stored for this Recipe yet.</td>
                         </tr>
                       )}
                     </tbody>
