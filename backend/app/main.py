@@ -6,6 +6,7 @@ from app.api.v1.vendors import router as vendors_router
 from app.api.v1.customers import router as customers_router
 from app.api.v1.boms import router as boms_router
 from app.api.v1.manufacturing import router as manufacturing_router
+from app.api.v1.recipes import router as recipes_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
@@ -30,6 +31,7 @@ app.include_router(vendors_router, prefix="/api/v1/vendors", tags=["vendors"])
 app.include_router(customers_router, prefix="/api/v1/customers", tags=["customers"])
 app.include_router(boms_router, prefix="/api/v1/boms", tags=["boms"])
 app.include_router(manufacturing_router, prefix="/api/v1/manufacturing-orders", tags=["manufacturing"])
+app.include_router(recipes_router, prefix="/api/v1/recipes", tags=["recipes"])
 
 @app.get("/")
 def read_root():
