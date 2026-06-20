@@ -65,12 +65,18 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
     try {
       const finalRole = role === 'Customer' ? 'Customer' : staffRole === 'Admin' ? 'StoreAdmin' : staffRole;
       
-      await api.post('/auth/signup', {
+      const signupPayload = {
         name,
         email,
         password,
         role: finalRole,
-      });
+      };
+      if (role === 'Customer') {
+        signupPayload.phone = phone;
+        signupPayload.address = address;
+      }
+
+      await api.post('/auth/signup', signupPayload);
       
       // Auto-login after signup, or just redirect to login (the app logic currently passes role to onSignupSuccess which does a mock login)
       // Since it's better to login via the API to get the token, we will call login API.

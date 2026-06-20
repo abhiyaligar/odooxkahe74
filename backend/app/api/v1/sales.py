@@ -15,21 +15,35 @@ from app.api.dependencies import get_current_user, RoleChecker
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
 write_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin, UserRole.SalesUser])
+# Allow Customers to view orders (which will be filtered to their own)
 read_checker = RoleChecker([
     UserRole.SuperAdmin,
     UserRole.StoreAdmin,
     UserRole.SalesUser,
     UserRole.PurchaseUser,
     UserRole.InventoryManager,
-    UserRole.BusinessOwner
+    UserRole.BusinessOwner,
+    UserRole.Customer
+])
+# Specific checker for sales order creation including Customer
+create_checker = RoleChecker([
+    UserRole.SuperAdmin,
+    UserRole.StoreAdmin,
+    UserRole.SalesUser,
+    UserRole.Customer
 ])
 
-@router.post("/", response_model=SalesOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(write_checker)])
+@router.post("/", response_model=SalesOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(create_checker)])
 async def create_sales_order(
     order_in: SalesOrderCreate, 
-    current_user: User = Depends(write_checker),
+    current_user: User = Depends(create_checker),
     db: AsyncSession = Depends(get_db)
 ):
+    if current_user.role == UserRole.Customer and order_in.customer_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Customers can only place orders for themselves."
+        )
     # Generate unique order number
     order_number = f"SO-{uuid.uuid4().hex[:8].upper()}"
     
@@ -76,13 +90,17 @@ async def create_sales_order(
     return db_order
 
 @router.get("/", response_model=List[SalesOrderResponse], dependencies=[Depends(read_checker)])
-async def list_sales_orders(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(SalesOrder)
-        .options(selectinload(SalesOrder.lines))
-        .offset(skip)
-        .limit(limit)
-    )
+async def list_sales_orders(
+    skip: int = 0, 
+    limit: int = 100, 
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    query = select(SalesOrder).options(selectinload(SalesOrder.lines))
+    if current_user.role == UserRole.Customer:
+        query = query.where(SalesOrder.customer_id == current_user.id)
+        
+    result = await db.execute(query.offset(skip).limit(limit))
     return result.scalars().all()
 
 @router.post("/{order_id}/confirm", dependencies=[Depends(write_checker)])

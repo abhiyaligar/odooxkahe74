@@ -44,6 +44,11 @@ export default function CustomerPortal() {
     queryFn: () => api.get('/customers/')
   });
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => api.get('/auth/me')
+  });
+
   // Navigation state
   const [currentTab, setCurrentTab] = useState("catalog"); // catalog, detail, cart, orders, track
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -56,16 +61,23 @@ export default function CustomerPortal() {
   const [searchQuery, setSearchQuery] = useState("");
   
   // Checkout Form states
-  const [customerName, setCustomerName] = useState("Vikas Homes");
-  const [address, setAddress] = useState("Flat 402, Royal Residency, Delhi");
-  const [phone, setPhone] = useState("555-0230");
+  const [customerName, setCustomerName] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
 
   // Show views switcher dropdown
   const [showViewDropdown, setShowViewDropdown] = useState(false);
 
-  // Determine a customer ID to use for the demo portal
-  const demoCustomer = customers.find(c => c.name.toLowerCase().includes("vikas")) || customers[0];
-  const customerId = demoCustomer ? demoCustomer.id : null;
+  // Determine a customer ID to use for the portal
+  const customerId = currentUser?.customer_profile?.id || null;
+
+  React.useEffect(() => {
+    if (currentUser?.customer_profile) {
+      setCustomerName(currentUser.customer_profile.name || "");
+      setPhone(currentUser.customer_profile.phone || "");
+      setAddress(currentUser.customer_profile.address || "");
+    }
+  }, [currentUser]);
 
   const createSalesOrderMutation = useMutation({
     mutationFn: (newOrder) => api.post('/sales-orders/', newOrder),

@@ -129,6 +129,7 @@ class Customer(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+    address = Column(String, nullable=True)
     category = Column(Enum(CustomerCategory), default=CustomerCategory.Retail, nullable=False)
 
 class SalesOrderStatus(str, enum.Enum):

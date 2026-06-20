@@ -7,6 +7,7 @@ class CustomerBase(BaseModel):
     name: str
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
+    address: Optional[str] = None
     category: CustomerCategory = CustomerCategory.Retail
 
 class CustomerCreate(CustomerBase):
@@ -16,6 +17,7 @@ class CustomerUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
+    address: Optional[str] = None
     category: Optional[CustomerCategory] = None
 
 class CustomerResponse(CustomerBase):
