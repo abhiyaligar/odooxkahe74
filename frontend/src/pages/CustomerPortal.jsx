@@ -17,14 +17,20 @@ import {
   MapPin, 
   Truck,
   ArrowLeft,
-  Loader2
+  Loader2,
+  LogOut,
+  Settings,
+  Shield,
+  Mail,
+  Calendar
 } from 'lucide-react';
 
 export default function CustomerPortal() {
   const queryClient = useQueryClient();
   const { 
     currentRole, 
-    setCurrentRole
+    setCurrentRole,
+    logout
   } = useErpStore();
 
   // Fetch data
@@ -49,9 +55,10 @@ export default function CustomerPortal() {
   });
 
   // Navigation state
-  const [currentTab, setCurrentTab] = useState("catalog"); // catalog, detail, cart, orders, track
+  const [currentTab, setCurrentTab] = useState("catalog"); // catalog, detail, cart, orders, track, profile
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   
   // Shopping Cart state
   const [cart, setCart] = useState([]);
@@ -303,6 +310,51 @@ export default function CustomerPortal() {
               </span>
             )}
           </button>
+
+          {/* User Avatar & Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary transition-colors duration-150"
+            >
+              <User size={16} />
+            </button>
+
+            {showUserMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowUserMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-[8px] shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        setCurrentTab('profile');
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-textPrimary hover:bg-elevated transition-colors"
+                    >
+                      <Settings size={14} className="mr-2 text-textSecondary" />
+                      My Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
+                          logout();
+                        }
+                      }}
+                      className="flex w-full items-center px-4 py-2 text-sm text-danger hover:bg-danger/10 transition-colors"
+                    >
+                      <LogOut size={14} className="mr-2" />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
         </div>
       </header>
@@ -762,6 +814,65 @@ export default function CustomerPortal() {
                         })}
                     </tbody>
                   </table>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 6: PROFILE */}
+        {currentTab === "profile" && (
+          <div className="space-y-6 max-w-2xl mx-auto">
+            <h2 className="text-xl font-bold tracking-tight">My Profile</h2>
+            
+            <div className="bg-card border border-border rounded-[12px] p-6 space-y-6 shadow-sm">
+              <div className="flex items-center space-x-4 border-b border-border pb-6">
+                <div className="h-16 w-16 rounded-full bg-elevated border-2 border-border flex items-center justify-center">
+                  <span className="text-xl font-bold font-mono tracking-tighter text-textPrimary">
+                    {(currentUser?.username || currentUser?.customer_profile?.name || "CUS").substring(0, 2).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-textPrimary">{currentUser?.username || "Customer User"}</h3>
+                  <p className="text-sm text-textSecondary flex items-center mt-1">
+                    <Mail size={14} className="mr-1.5" />
+                    {currentUser?.email || "No email provided"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
+                      <Shield size={12} className="mr-1" /> System Role
+                    </p>
+                    <p className="text-sm font-medium text-textPrimary">Customer Portal User</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
+                      <Calendar size={12} className="mr-1" /> Member Since
+                    </p>
+                    <p className="text-sm font-medium text-textPrimary">
+                      {currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
+                      <User size={12} className="mr-1" /> Customer Profile Name
+                    </p>
+                    <p className="text-sm font-medium text-textPrimary">{currentUser?.customer_profile?.name || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
+                      <MapPin size={12} className="mr-1" /> Registered Address
+                    </p>
+                    <p className="text-sm font-medium text-textPrimary">{currentUser?.customer_profile?.address || "N/A"}</p>
+                  </div>
                 </div>
               </div>
 

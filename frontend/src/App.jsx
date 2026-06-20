@@ -28,6 +28,7 @@ import Manufacturing from './pages/Manufacturing';
 import Vendors from './pages/Vendors';
 import AuditLogs from './pages/AuditLogs';
 import Users from './pages/Users';
+import Profile from './pages/Profile';
 
 // Role-based root redirector
 const RootRedirect = () => {
@@ -144,6 +145,7 @@ function AppContent() {
                   <AuditLogs />
                 </RequireAuth>
               } />
+              <Route path="profile" element={<Profile />} />
               <Route path="*" element={<RootRedirect />} />
             </Routes>
           </Layout>

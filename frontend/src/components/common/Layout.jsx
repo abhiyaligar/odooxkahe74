@@ -16,7 +16,9 @@ import {
   User,
   Users,
   UserPlus,
-  Activity
+  Activity,
+  LogOut,
+  Settings
 } from 'lucide-react';
 
 export const Layout = ({ children }) => {
@@ -25,6 +27,7 @@ export const Layout = ({ children }) => {
   const { currentRole, setCurrentRole, globalSearch, setGlobalSearch, logout } = useErpStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Role details mapping
   const roleDisplayNames = {
@@ -222,18 +225,51 @@ export const Layout = ({ children }) => {
               <span>{roleDisplayNames[currentRole]}</span>
             </div>
 
-            {/* User Avatar & Logout */}
-            <button
-              onClick={() => {
-                if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
-                  logout();
-                }
-              }}
-              title="Sign Out"
-              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary hover:text-danger transition-colors duration-150"
-            >
-              <User size={16} />
-            </button>
+            {/* User Avatar & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                title="User Menu"
+                className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary transition-colors duration-150"
+              >
+                <User size={16} />
+              </button>
+
+              {showUserMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-[8px] shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          navigate('/profile');
+                        }}
+                        className="flex w-full items-center px-4 py-2 text-sm text-textPrimary hover:bg-elevated transition-colors"
+                      >
+                        <Settings size={14} className="mr-2 text-textSecondary" />
+                        My Profile
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
+                            logout();
+                          }
+                        }}
+                        className="flex w-full items-center px-4 py-2 text-sm text-danger hover:bg-danger/10 transition-colors"
+                      >
+                        <LogOut size={14} className="mr-2" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
