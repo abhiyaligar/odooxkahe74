@@ -3,18 +3,18 @@ import { useErpStore } from '../store/erpStore';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { 
-  ShoppingBag, 
-  ShoppingCart, 
-  User, 
-  ChevronRight, 
-  Check, 
-  Search, 
-  Plus, 
-  Minus, 
-  Trash2, 
-  Clock, 
-  MapPin, 
+import {
+  ShoppingBag,
+  ShoppingCart,
+  User,
+  ChevronRight,
+  Check,
+  Search,
+  Plus,
+  Minus,
+  Trash2,
+  Clock,
+  MapPin,
   Truck,
   ArrowLeft,
   Loader2,
@@ -27,8 +27,10 @@ import {
 
 export default function CustomerPortal() {
   const queryClient = useQueryClient();
-  const { 
-    currentRole, 
+  const {
+    currentRole,
+    setCurrentRole,
+    logout
     setCurrentRole,
     logout
   } = useErpStore();
@@ -59,23 +61,23 @@ export default function CustomerPortal() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  
+
   // Profile edit state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editProfileName, setEditProfileName] = useState("");
-  
+
   React.useEffect(() => {
     if (currentUser?.name && !isEditingProfile) {
       setEditProfileName(currentUser.name);
     }
   }, [currentUser, isEditingProfile]);
-  
+
   // Shopping Cart state
   const [cart, setCart] = useState([]);
-  
+
   // Catalog filter states
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Checkout Form states
   const [customerName, setCustomerName] = useState("");
   const [address, setAddress] = useState("");
@@ -135,8 +137,8 @@ export default function CustomerPortal() {
 
   // Filter products to show only finished goods
   const finishedGoods = products.filter(p => p.type === "FinishedGood");
-  
-  const filteredCatalog = finishedGoods.filter(p => 
+
+  const filteredCatalog = finishedGoods.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -165,7 +167,7 @@ export default function CustomerPortal() {
     const qty = Number(quantity);
     const existing = cart.find(item => item.product.id === product.id);
     if (existing) {
-      setCart(cart.map(item => 
+      setCart(cart.map(item =>
         item.product.id === product.id ? { ...item, quantity: item.quantity + qty } : item
       ));
     } else {
@@ -235,10 +237,10 @@ export default function CustomerPortal() {
       { key: "Delivered", label: "Delivered" }
     ];
 
-    const currentStageIdx = 
-      status === "Draft" ? 0 : 
-      status === "Confirmed" || status === "PartiallyDelivered" ? 1 : 
-      status === "FullyDelivered" ? 2 : 0;
+    const currentStageIdx =
+      status === "Draft" ? 0 :
+        status === "Confirmed" || status === "PartiallyDelivered" ? 1 :
+          status === "FullyDelivered" ? 2 : 0;
 
     return (
       <div className="flex items-center justify-between w-full px-4 py-4 bg-card border border-border rounded-custom">
@@ -249,18 +251,16 @@ export default function CustomerPortal() {
           return (
             <React.Fragment key={stage.key}>
               <div className="flex items-center space-x-2">
-                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-150 ${
-                  isActive ? 'bg-accent text-background border border-accent' :
-                  isCompleted ? 'bg-elevated text-textSecondary border border-border' :
-                  'bg-background text-textMuted border border-border'
-                }`}>
+                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold font-mono transition-all duration-150 ${isActive ? 'bg-accent text-background border border-accent' :
+                    isCompleted ? 'bg-elevated text-textSecondary border border-border' :
+                      'bg-background text-textMuted border border-border'
+                  }`}>
                   {isCompleted ? <Check size={12} strokeWidth={3} className="text-textSecondary" /> : (idx + 1)}
                 </div>
-                <span className={`text-[11px] font-semibold tracking-wide ${
-                  isActive ? 'text-textPrimary' : 
-                  isCompleted ? 'text-textSecondary font-medium' : 
-                  'text-textMuted'
-                }`}>
+                <span className={`text-[11px] font-semibold tracking-wide ${isActive ? 'text-textPrimary' :
+                    isCompleted ? 'text-textSecondary font-medium' :
+                      'text-textMuted'
+                  }`}>
                   {stage.key === "Confirmed" && status === "PartiallyDelivered" ? "Out for Delivery" : stage.label}
                 </span>
               </div>
@@ -288,13 +288,13 @@ export default function CustomerPortal() {
 
         {/* Center Links */}
         <nav className="hidden md:flex items-center space-x-6 text-xs font-semibold tracking-wide uppercase">
-          <button 
+          <button
             onClick={() => setCurrentTab("catalog")}
             className={`transition-colors duration-150 ${currentTab === "catalog" || currentTab === "detail" ? 'text-textPrimary' : 'text-textSecondary hover:text-textPrimary'}`}
           >
             Catalog
           </button>
-          <button 
+          <button
             onClick={() => setCurrentTab("orders")}
             className={`transition-colors duration-150 ${currentTab === "orders" || currentTab === "track" ? 'text-textPrimary' : 'text-textSecondary hover:text-textPrimary'}`}
           >
@@ -304,12 +304,12 @@ export default function CustomerPortal() {
 
         {/* Right Actions */}
         <div className="flex items-center space-x-4">
-          
+
           {/* Theme Switcher Toggle */}
           <ThemeToggle />
-          
+
           {/* Cart Icon Link */}
-          <button 
+          <button
             onClick={() => setCurrentTab("cart")}
             className="relative p-1.5 rounded-custom border border-border hover:bg-elevated/40 transition-colors"
           >
@@ -320,6 +320,36 @@ export default function CustomerPortal() {
               </span>
             )}
           </button>
+
+          {/* User Avatar / Logout */}
+          <div className="flex items-center space-x-2 border-l border-border pl-4 ml-2">
+            {currentUser?.avatar_url ? (
+              <img
+                src={currentUser.avatar_url}
+                alt="Avatar"
+                className="h-8 w-8 rounded-full border border-border object-cover"
+                title={currentUser.name}
+              />
+            ) : (
+              <div
+                className="h-8 w-8 rounded-full border border-border bg-elevated flex items-center justify-center text-xs font-semibold text-textPrimary"
+                title={currentUser?.name || "Customer Profile"}
+              >
+                <User size={16} />
+              </div>
+            )}
+            <button
+              onClick={() => {
+                if (window.confirm("Sign out of Shiv Furniture Works Customer Portal?")) {
+                  logout();
+                }
+              }}
+              title="Sign Out"
+              className="text-[10px] uppercase tracking-wider font-bold text-textSecondary hover:text-danger transition-colors duration-150 pl-1"
+            >
+              Sign Out
+            </button>
+          </div>
 
           {/* User Avatar & Dropdown */}
           <div className="relative">
@@ -332,8 +362,8 @@ export default function CustomerPortal() {
 
             {showUserMenu && (
               <>
-                <div 
-                  className="fixed inset-0 z-40" 
+                <div
+                  className="fixed inset-0 z-40"
                   onClick={() => setShowUserMenu(false)}
                 />
                 <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-[8px] shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
@@ -371,7 +401,7 @@ export default function CustomerPortal() {
 
       {/* Body Viewport */}
       <main className="flex-1 overflow-y-auto max-w-6xl w-full mx-auto p-6 md:p-8 space-y-6">
-        
+
         {/* VIEW 1: CATALOG GRID */}
         {(currentTab === "catalog") && (
           <div className="space-y-6">
@@ -400,19 +430,19 @@ export default function CustomerPortal() {
               </div>
             ) : filteredCatalog.length === 0 ? (
               <div className="border border-border bg-card rounded-[8px] p-8 text-center">
-                 <p className="text-xs text-textSecondary">No products available in the catalog yet.</p>
+                <p className="text-xs text-textSecondary">No products available in the catalog yet.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCatalog.map(p => {
                   const isMTO = p.procurement_strategy === "MTO";
                   return (
-                    <div 
+                    <div
                       key={p.id}
                       className="bg-card border border-border rounded-[8px] p-5 flex flex-col space-y-4 hover:border-textSecondary transition-all duration-150"
                     >
                       {/* Product Vector Image */}
-                      <div 
+                      <div
                         onClick={() => {
                           setSelectedProduct(p);
                           setCurrentTab("detail");
@@ -424,7 +454,7 @@ export default function CustomerPortal() {
 
                       <div className="space-y-1 flex-1">
                         <div className="flex items-start justify-between">
-                          <h3 
+                          <h3
                             onClick={() => {
                               setSelectedProduct(p);
                               setCurrentTab("detail");
@@ -441,15 +471,14 @@ export default function CustomerPortal() {
                       </div>
 
                       <div className="flex items-center justify-between pt-2">
-                        <span className={`inline-block text-[9px] font-bold uppercase rounded px-2 py-0.5 tracking-wider border font-mono ${
-                          isMTO ? 'border-warning/40 text-warning bg-warning/5' : 'border-success/40 text-success bg-success/5'
-                        }`}>
+                        <span className={`inline-block text-[9px] font-bold uppercase rounded px-2 py-0.5 tracking-wider border font-mono ${isMTO ? 'border-warning/40 text-warning bg-warning/5' : 'border-success/40 text-success bg-success/5'
+                          }`}>
                           {isMTO ? "Built to Order" : "In Stock"}
                         </span>
 
                         {cart.find(item => item.product.id === p.id) ? (
                           <div className="flex items-center space-x-2 bg-background border border-border rounded-custom p-0.5">
-                            <button 
+                            <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); updateCartQty(p.id, -1); }}
                               className="p-1 text-textSecondary hover:text-textPrimary"
@@ -457,7 +486,7 @@ export default function CustomerPortal() {
                               <Minus size={10} />
                             </button>
                             <span className="w-8 text-center font-mono font-bold text-xs">{cart.find(item => item.product.id === p.id).quantity}</span>
-                            <button 
+                            <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); updateCartQty(p.id, 1); }}
                               className="p-1 text-textSecondary hover:text-textPrimary"
@@ -485,7 +514,7 @@ export default function CustomerPortal() {
         {/* VIEW 2: PRODUCT DETAIL */}
         {currentTab === "detail" && selectedProduct && (
           <div className="space-y-6">
-            <button 
+            <button
               onClick={() => setCurrentTab("catalog")}
               className="flex items-center space-x-2 text-xs text-textSecondary hover:text-textPrimary transition-colors"
             >
@@ -505,7 +534,7 @@ export default function CustomerPortal() {
                   <h2 className="text-2xl font-bold tracking-tight">{selectedProduct.name}</h2>
                   <div className="flex items-center space-x-4">
                     <span className="text-xl font-extrabold font-mono text-accent">${(selectedProduct.sales_price || 0).toFixed(2)}</span>
-                    
+
                     {/* User Friendly Stock Message */}
                     <span className="flex items-center text-xs space-x-1">
                       {selectedProduct.procurement_strategy === "MTS" ? (
@@ -533,7 +562,7 @@ export default function CustomerPortal() {
                 <div className="pt-4 flex items-center space-x-4">
                   {cart.find(item => item.product.id === selectedProduct.id) ? (
                     <div className="flex-1 flex items-center justify-center space-x-4 bg-background border border-border rounded-custom p-1.5 py-2">
-                      <button 
+                      <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); updateCartQty(selectedProduct.id, -1); }}
                         className="p-2 bg-elevated rounded-custom text-textSecondary hover:text-textPrimary hover:bg-card transition-colors"
@@ -541,7 +570,7 @@ export default function CustomerPortal() {
                         <Minus size={14} />
                       </button>
                       <span className="w-12 text-center font-mono font-bold text-sm">{cart.find(item => item.product.id === selectedProduct.id).quantity}</span>
-                      <button 
+                      <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); updateCartQty(selectedProduct.id, 1); }}
                         className="p-2 bg-elevated rounded-custom text-textSecondary hover:text-textPrimary hover:bg-card transition-colors"
@@ -582,7 +611,7 @@ export default function CustomerPortal() {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                
+
                 {/* Cart Line Items */}
                 <div className="lg:col-span-2 border border-border bg-card rounded-[8px] divide-y divide-border overflow-hidden">
                   {cart.map(item => (
@@ -595,7 +624,7 @@ export default function CustomerPortal() {
                       <div className="flex items-center space-x-4">
                         {/* Qty selectors */}
                         <div className="flex items-center space-x-2 bg-background border border-border rounded-custom p-0.5">
-                          <button 
+                          <button
                             type="button"
                             onClick={() => updateCartQty(item.product.id, -1)}
                             className="p-1 text-textSecondary hover:text-textPrimary"
@@ -603,7 +632,7 @@ export default function CustomerPortal() {
                             <Minus size={10} />
                           </button>
                           <span className="w-8 text-center font-mono font-bold text-xs">{item.quantity}</span>
-                          <button 
+                          <button
                             type="button"
                             onClick={() => updateCartQty(item.product.id, 1)}
                             className="p-1 text-textSecondary hover:text-textPrimary"
@@ -618,7 +647,7 @@ export default function CustomerPortal() {
                         </span>
 
                         {/* Remove */}
-                        <button 
+                        <button
                           onClick={() => removeFromCart(item.product.id)}
                           className="text-textMuted hover:text-danger p-1 transition-colors"
                         >
@@ -649,10 +678,10 @@ export default function CustomerPortal() {
                   {/* Delivery address form */}
                   <form onSubmit={handleCheckoutSubmit} className="bg-card border border-border rounded-[8px] p-5 space-y-4">
                     <span className="text-[10px] font-bold text-textSecondary uppercase tracking-wider block">Shipping Information</span>
-                    
+
                     <div className="flex flex-col space-y-1">
                       <span className="text-[10px] text-textSecondary font-semibold">Contact Customer</span>
-                      <input 
+                      <input
                         type="text"
                         required
                         value={customerName}
@@ -716,7 +745,7 @@ export default function CustomerPortal() {
                   const total = itemLines.reduce((sum, l) => sum + (l.quantity_ordered * (l.unit_price || 0)), 0);
 
                   return (
-                    <div 
+                    <div
                       key={order.id}
                       onClick={() => {
                         setSelectedOrder(order);
@@ -736,9 +765,8 @@ export default function CustomerPortal() {
 
                       <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                         {/* Friendly Status Badge */}
-                        <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
-                          customerStatusColors[order.status] || ''
-                        }`}>
+                        <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${customerStatusColors[order.status] || ''
+                          }`}>
                           {customerStatusLabels[order.status] || order.status}
                         </span>
                         <ChevronRight size={16} className="text-textSecondary" />
@@ -754,7 +782,7 @@ export default function CustomerPortal() {
         {/* VIEW 5: ORDER TRACKING DETAIL */}
         {currentTab === "track" && selectedOrder && (
           <div className="space-y-6">
-            <button 
+            <button
               onClick={() => setCurrentTab("orders")}
               className="flex items-center space-x-2 text-xs text-textSecondary hover:text-textPrimary transition-colors"
             >
@@ -763,7 +791,7 @@ export default function CustomerPortal() {
             </button>
 
             <div className="space-y-6">
-              
+
               {/* Stepper */}
               {renderTrackingStepper(selectedOrder.status)}
 
@@ -810,18 +838,18 @@ export default function CustomerPortal() {
                     </thead>
                     <tbody>
                       {(selectedOrder.lines || []).map(line => {
-                          const prod = products.find(p => p.id === line.product_id);
-                          return (
-                            <tr key={line.id} className="border-b border-border/40 last:border-0 hover:bg-elevated/10 transition-colors">
-                              <td className="py-2 px-3 text-textPrimary font-semibold">{prod?.name || 'Unknown Item'}</td>
-                              <td className="py-2 px-3 text-right text-textSecondary font-mono">{line.quantity_ordered}</td>
-                              <td className="py-2 px-3 text-right text-textSecondary font-mono">${(line.unit_price || 0).toFixed(2)}</td>
-                              <td className="py-2 px-3 text-right text-textPrimary font-bold font-mono">
-                                ${(line.quantity_ordered * (line.unit_price || 0)).toFixed(2)}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        const prod = products.find(p => p.id === line.product_id);
+                        return (
+                          <tr key={line.id} className="border-b border-border/40 last:border-0 hover:bg-elevated/10 transition-colors">
+                            <td className="py-2 px-3 text-textPrimary font-semibold">{prod?.name || 'Unknown Item'}</td>
+                            <td className="py-2 px-3 text-right text-textSecondary font-mono">{line.quantity_ordered}</td>
+                            <td className="py-2 px-3 text-right text-textSecondary font-mono">${(line.unit_price || 0).toFixed(2)}</td>
+                            <td className="py-2 px-3 text-right text-textPrimary font-bold font-mono">
+                              ${(line.quantity_ordered * (line.unit_price || 0)).toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -837,7 +865,7 @@ export default function CustomerPortal() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold tracking-tight">My Profile</h2>
               {!isEditingProfile ? (
-                <button 
+                <button
                   onClick={() => {
                     setEditProfileName(currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || "Customer User");
                     setIsEditingProfile(true);
@@ -848,13 +876,13 @@ export default function CustomerPortal() {
                 </button>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <button 
+                  <button
                     onClick={() => setIsEditingProfile(false)}
                     className="text-textSecondary hover:text-textPrimary text-xs font-semibold transition-colors"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={async () => {
                       try {
                         await api.put('/auth/me', { name: editProfileName });
@@ -871,7 +899,7 @@ export default function CustomerPortal() {
                 </div>
               )}
             </div>
-            
+
             <div className="bg-card border border-border rounded-[12px] p-6 space-y-6 shadow-sm">
               <div className="flex items-center space-x-4 border-b border-border pb-6">
                 <div className="h-16 w-16 rounded-full bg-elevated border-2 border-border flex items-center justify-center">
@@ -881,8 +909,8 @@ export default function CustomerPortal() {
                 </div>
                 <div className="flex-1">
                   {isEditingProfile ? (
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={editProfileName}
                       onChange={(e) => setEditProfileName(e.target.value)}
                       className="text-lg font-bold text-textPrimary bg-background border border-border rounded px-2 py-1 focus:outline-none focus:border-accent w-full max-w-[250px]"

@@ -42,30 +42,28 @@ async def get_audit_logs(
 
     # 2. Get stats counts
     # We query the total matching logs
-    count_query = select(func.count(AuditLog.id)).select_from(base_query.subquery())
+    total_subq = base_query.subquery()
+    count_query = select(func.count()).select_from(total_subq)
     total_res = await db.execute(count_query)
     total_count = total_res.scalar() or 0
 
     # Total Creates matching filters
-    create_query = select(func.count(AuditLog.id)).select_from(
-        base_query.where(AuditLog.action == "Create").subquery()
-    )
+    create_subq = base_query.where(AuditLog.action == "Create").subquery()
+    create_query = select(func.count()).select_from(create_subq)
     create_res = await db.execute(create_query)
     create_count = create_res.scalar() or 0
 
     # Total Updates matching filters
-    update_query = select(func.count(AuditLog.id)).select_from(
-        base_query.where(AuditLog.action.in_([
-            "Update", "Confirm", "Deliver", "Receive", "Start", "Complete", "Void"
-        ])).subquery()
-    )
+    update_subq = base_query.where(AuditLog.action.in_([
+        "Update", "Confirm", "Deliver", "Receive", "Start", "Complete", "Void"
+    ])).subquery()
+    update_query = select(func.count()).select_from(update_subq)
     update_res = await db.execute(update_query)
     update_count = update_res.scalar() or 0
 
     # Total Deletes matching filters
-    delete_query = select(func.count(AuditLog.id)).select_from(
-        base_query.where(AuditLog.action.in_(["Delete", "Cancel"])).subquery()
-    )
+    delete_subq = base_query.where(AuditLog.action.in_(["Delete", "Cancel"])).subquery()
+    delete_query = select(func.count()).select_from(delete_subq)
     delete_res = await db.execute(delete_query)
     delete_count = delete_res.scalar() or 0
 

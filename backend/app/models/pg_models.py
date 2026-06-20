@@ -26,6 +26,7 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.SalesUser, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    avatar_url = Column(String, nullable=True)
 
 class ProductType(str, enum.Enum):
     FinishedGood = "FinishedGood"

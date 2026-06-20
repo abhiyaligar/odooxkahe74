@@ -21,7 +21,8 @@ export default function Manufacturing() {
 
   const { 
     workCenters, 
-    currentRole
+    currentRole,
+    bomOperations
   } = useErpStore();
 
   const { data: manufacturingOrders = [], refetch: refetchMos } = useQuery({

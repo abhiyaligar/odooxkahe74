@@ -14,7 +14,7 @@ async def test_signup_success(client: AsyncClient, db_session: AsyncSession):
         "password": "securepassword123",
         "role": "SalesUser"
     }
-    response = await client.post("/api/v1/auth/signup", json=signup_data)
+    response = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response.status_code == 201
     res_json = response.json()
     assert res_json["name"] == signup_data["name"]
@@ -40,11 +40,11 @@ async def test_signup_duplicate_email(client: AsyncClient):
     }
     
     # First signup
-    response = await client.post("/api/v1/auth/signup", json=signup_data)
+    response = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response.status_code == 201
     
     # Second signup with same email
-    response2 = await client.post("/api/v1/auth/signup", json=signup_data)
+    response2 = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response2.status_code == 400
     assert response2.json()["detail"] == "Email already registered"
 
@@ -55,7 +55,7 @@ async def test_login_success(client: AsyncClient):
         "password": "mysecretpassword",
         "role": "BusinessOwner"
     }
-    await client.post("/api/v1/auth/signup", json=signup_data)
+    await client.post("/api/v1/auth/signup", data=signup_data)
 
     # Attempt login (FastAPI OAuth2PasswordRequestForm uses form-data)
     login_data = {
@@ -75,7 +75,7 @@ async def test_login_incorrect_password(client: AsyncClient):
         "password": "correctpassword",
         "role": "SalesUser"
     }
-    await client.post("/api/v1/auth/signup", json=signup_data)
+    await client.post("/api/v1/auth/signup", data=signup_data)
 
     # Attempt login with wrong password
     login_data = {
@@ -106,7 +106,7 @@ async def test_long_password_handling(client: AsyncClient):
         "role": "InventoryManager"
     }
     
-    response = await client.post("/api/v1/auth/signup", json=signup_data)
+    response = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response.status_code == 201
     
     # Test login with the long password

@@ -33,11 +33,12 @@ export default function AuditLogs() {
   });
 
   // Fetch users for filter dropdown
-  const { data: usersData = [] } = useQuery({
+  const { data: usersDataResponse } = useQuery({
     queryKey: ['users'],
     queryFn: () => api.get('/auth/users'),
     enabled: isAdmin,
   });
+  const usersData = usersDataResponse?.users || [];
 
   const handleResetFilters = () => {
     setFromDate("");

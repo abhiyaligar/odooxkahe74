@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useErpStore } from '../../store/erpStore';
 import { ThemeToggle } from './ThemeToggle';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  ShoppingCart, 
-  Layers, 
-  Factory, 
-  Search, 
-  ChevronLeft, 
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../api/client';
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingBag,
+  ShoppingCart,
+  Layers,
+  Factory,
+  Search,
+  ChevronLeft,
   ChevronRight,
   ShieldAlert,
   User,
@@ -27,7 +29,11 @@ export const Layout = ({ children }) => {
   const { currentRole, setCurrentRole, globalSearch, setGlobalSearch, logout } = useErpStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => api.get('/auth/me')
+  });
 
   // Role details mapping
   const roleDisplayNames = {
@@ -54,57 +60,57 @@ export const Layout = ({ children }) => {
 
   // Sidebar items definition
   const navigationItems = [
-    { 
-      name: "Dashboard", 
-      path: "/dashboard", 
+    {
+      name: "Dashboard",
+      path: "/dashboard",
       icon: LayoutDashboard,
       roles: ["SuperAdmin", "StoreAdmin", "BusinessOwner"]
     },
-    { 
-      name: "Products", 
-      path: "/products", 
+    {
+      name: "Products",
+      path: "/products",
       icon: Package,
       roles: ["SuperAdmin", "StoreAdmin", "SalesUser", "PurchaseUser", "ManufacturingUser", "InventoryManager", "BusinessOwner"]
     },
-    { 
-      name: "Sales Orders", 
-      path: "/sales", 
+    {
+      name: "Sales Orders",
+      path: "/sales",
       icon: ShoppingBag,
       roles: ["SuperAdmin", "StoreAdmin", "SalesUser", "PurchaseUser", "InventoryManager", "BusinessOwner"]
     },
-    { 
-      name: "Purchase Orders", 
-      path: "/purchase", 
+    {
+      name: "Purchase Orders",
+      path: "/purchase",
       icon: ShoppingCart,
       roles: ["SuperAdmin", "StoreAdmin", "PurchaseUser", "ManufacturingUser", "InventoryManager", "BusinessOwner"]
     },
-    { 
-      name: "Recipes", 
-      path: "/recipes", 
+    {
+      name: "Recipes",
+      path: "/recipes",
       icon: Layers,
       roles: ["SuperAdmin", "StoreAdmin", "ManufacturingUser", "BusinessOwner"]
     },
-    { 
-      name: "Manufacturing", 
-      path: "/manufacturing", 
+    {
+      name: "Manufacturing",
+      path: "/manufacturing",
       icon: Factory,
       roles: ["SuperAdmin", "StoreAdmin", "PurchaseUser", "ManufacturingUser", "InventoryManager", "BusinessOwner"]
     },
-    { 
-      name: "Vendors", 
-      path: "/vendors", 
+    {
+      name: "Vendors",
+      path: "/vendors",
       icon: Users,
       roles: ["SuperAdmin", "StoreAdmin"]
     },
-    { 
-      name: "Users", 
-      path: "/users", 
+    {
+      name: "Users",
+      path: "/users",
       icon: UserPlus,
       roles: ["SuperAdmin", "StoreAdmin"]
     },
-    { 
-      name: "Audit Logs", 
-      path: "/audit-logs", 
+    {
+      name: "Audit Logs",
+      path: "/audit-logs",
       icon: Activity,
       roles: ["SuperAdmin", "StoreAdmin"]
     }
@@ -122,7 +128,7 @@ export const Layout = ({ children }) => {
   const handleRoleChange = (role) => {
     setCurrentRole(role);
     setShowRoleDropdown(false);
-    
+
     // Check if new role has access to current path
     const targetItem = navigationItems.find(item => item.path === currentPath);
     if (targetItem && !targetItem.roles.includes(role)) {
@@ -137,10 +143,9 @@ export const Layout = ({ children }) => {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-textPrimary">
       {/* Sidebar */}
-      <aside 
-        className={`flex flex-col border-r border-border bg-card transition-all duration-150 relative ${
-          isCollapsed ? 'w-16' : 'w-60'
-        }`}
+      <aside
+        className={`flex flex-col border-r border-border bg-card transition-all duration-150 relative ${isCollapsed ? 'w-16' : 'w-60'
+          }`}
       >
         {/* Logo Section */}
         <div className="flex h-16 items-center justify-between border-b border-border px-4">
@@ -153,7 +158,7 @@ export const Layout = ({ children }) => {
           {isCollapsed && (
             <span className="mx-auto font-bold text-sm tracking-tighter">SF</span>
           )}
-          <button 
+          <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden lg:flex h-6 w-6 items-center justify-center rounded-custom border border-border bg-elevated hover:bg-card text-textSecondary hover:text-textPrimary transition-all duration-150 absolute -right-3 top-5 z-10 shadow-lg"
           >
@@ -171,11 +176,10 @@ export const Layout = ({ children }) => {
               <button
                 key={item.name}
                 onClick={() => navigate(item.path)}
-                className={`flex w-full items-center py-3 px-4 text-left transition-all duration-150 border-l-[3px] ${
-                  isActive 
-                    ? 'bg-accent/10 border-accent text-textPrimary' 
+                className={`flex w-full items-center py-3 px-4 text-left transition-all duration-150 border-l-[3px] ${isActive
+                    ? 'bg-accent/10 border-accent text-textPrimary'
                     : 'text-textSecondary hover:bg-elevated/40 hover:text-textPrimary border-transparent'
-                }`}
+                  }`}
               >
                 <Icon size={18} className={`${isActive ? 'text-textPrimary' : 'text-textSecondary'} shrink-0`} />
                 {!isCollapsed && (
@@ -212,12 +216,12 @@ export const Layout = ({ children }) => {
                 className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent"
               />
             </div>
-            
+
             {/* Theme Switcher Toggle */}
             <ThemeToggle />
 
             {/* Role Display */}
-            <div 
+            <div
               className="flex items-center space-x-2 bg-elevated border border-border rounded-custom px-3 py-1.5 text-xs text-textPrimary font-medium"
               title={`Current permissions bound to: ${roleDisplayNames[currentRole]}`}
             >
@@ -225,51 +229,26 @@ export const Layout = ({ children }) => {
               <span>{roleDisplayNames[currentRole]}</span>
             </div>
 
-            {/* User Avatar & Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                title="User Menu"
-                className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary transition-colors duration-150"
-              >
+            {/* User Avatar & Logout */}
+            <button
+              onClick={() => {
+                if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
+                  logout();
+                }
+              }}
+              title="Sign Out"
+              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary hover:text-danger transition-colors duration-150 overflow-hidden"
+            >
+              {currentUser?.avatar_url ? (
+                <img
+                  src={currentUser.avatar_url}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
                 <User size={16} />
-              </button>
-
-              {showUserMenu && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40" 
-                    onClick={() => setShowUserMenu(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-border rounded-[8px] shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          navigate('/profile');
-                        }}
-                        className="flex w-full items-center px-4 py-2 text-sm text-textPrimary hover:bg-elevated transition-colors"
-                      >
-                        <Settings size={14} className="mr-2 text-textSecondary" />
-                        My Profile
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
-                            logout();
-                          }
-                        }}
-                        className="flex w-full items-center px-4 py-2 text-sm text-danger hover:bg-danger/10 transition-colors"
-                      >
-                        <LogOut size={14} className="mr-2" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                </>
               )}
-            </div>
+            </button>
           </div>
         </header>
 

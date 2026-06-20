@@ -21,12 +21,18 @@ export default function Users() {
     role: "SalesUser"
   });
 
+  const [page, setPage] = useState(1);
+
   // Fetch users list
-  const { data: users = [], isLoading, error } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => api.get('/auth/users'),
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['users', page],
+    queryFn: () => api.get(`/auth/users?skip=${(page - 1) * 10}&limit=10`),
     enabled: isAdmin
   });
+
+  const totalCount = data?.total_count || 0;
+  const totalPages = Math.ceil(totalCount / 10) || 1;
+  const users = data?.users || [];
 
   // Create user mutation
   const createUserMutation = useMutation({
@@ -143,7 +149,7 @@ export default function Users() {
           type="text"
           placeholder="Search by name, email, or role..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
           className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent"
         />
       </div>
@@ -185,7 +191,20 @@ export default function Users() {
             ) : (
               filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-elevated/30 transition-colors duration-150">
-                  <td className="py-3 px-4 font-medium text-textPrimary">{user.name}</td>
+                  <td className="py-3 px-4 font-medium text-textPrimary flex items-center space-x-3">
+                    {user.avatar_url ? (
+                      <img 
+                        src={user.avatar_url} 
+                        alt={user.name} 
+                        className="w-7 h-7 rounded-full object-cover border border-border shrink-0"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                        {user.name ? user.name.charAt(0) : 'U'}
+                      </div>
+                    )}
+                    <span>{user.name}</span>
+                  </td>
                   <td className="py-3 px-4 text-textSecondary">{user.email}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide ${getRoleBadgeColor(user.role)}`}>
@@ -206,6 +225,27 @@ export default function Users() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between border-t border-border pt-4 text-xs">
+        <button
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="px-3 py-1.5 bg-card border border-border rounded-custom text-textPrimary hover:bg-elevated/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Previous
+        </button>
+        <span className="text-textSecondary">
+          Page {page} of {totalPages} ({totalCount} total users)
+        </span>
+        <button
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          className="px-3 py-1.5 bg-card border border-border rounded-custom text-textPrimary hover:bg-elevated/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Next
+        </button>
       </div>
 
       {/* Create User Slide-Over Form */}

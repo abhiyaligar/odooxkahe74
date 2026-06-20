@@ -1,43 +1,67 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
-from typing import List
+from typing import List, Optional
 
 from app.db.session import get_db
 from app.models.pg_models import User, UserRole, Customer, CustomerCategory
-from app.schemas.user import UserCreate, UserResponse, Token
+from app.schemas.user import UserCreate, UserResponse, Token, UserPagedResponse
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.config import settings
 from app.api.dependencies import get_current_user
+from app.services.gcs import upload_avatar_to_gcs
 
 router = APIRouter()
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def signup(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == user_in.email))
+async def signup(
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    role: UserRole = Form(UserRole.SalesUser),
+    phone: Optional[str] = Form(None),
+    address: Optional[str] = Form(None),
+    avatar: Optional[UploadFile] = File(None),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
     if user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    hashed_password = get_password_hash(user_in.password)
+    avatar_url = None
+    if avatar:
+        try:
+            avatar_url = await upload_avatar_to_gcs(avatar)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed GCS avatar upload: {e}")
+            if isinstance(e, ValueError):
+                pass
+            else:
+                raise HTTPException(status_code=500, detail=f"Failed to upload profile image: {str(e)}")
+
+    hashed_password = get_password_hash(password)
     db_user = User(
-        name=user_in.name,
-        email=user_in.email,
+        name=name,
+        email=email,
         password_hash=hashed_password,
-        role=user_in.role
+        role=role,
+        avatar_url=avatar_url
     )
     db.add(db_user)
     await db.flush()
     
-    if user_in.role == UserRole.Customer:
+    if role == UserRole.Customer:
         db_customer = Customer(
             id=db_user.id,
-            name=user_in.name,
-            email=user_in.email,
-            phone=user_in.phone,
-            address=user_in.address,
+            name=name,
+            email=email,
+            phone=phone,
+            address=address,
             category=CustomerCategory.Retail
         )
         db.add(db_customer)
@@ -76,8 +100,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/users", response_model=UserPagedResponse)
 async def list_users(
+    skip: Optional[int] = None,
+    limit: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -86,8 +112,22 @@ async def list_users(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrator roles can query user profiles list."
         )
-    result = await db.execute(select(User).order_by(User.name))
-    return result.scalars().all()
+    base_query = select(User)
+    total_res = await db.execute(select(func.count()).select_from(base_query.subquery()))
+    total_count = total_res.scalar() or 0
+
+    query = base_query.order_by(User.name)
+    if skip is not None:
+        query = query.offset(skip)
+    if limit is not None:
+        query = query.limit(limit)
+
+    result = await db.execute(query)
+    users = result.scalars().all()
+    return {
+        "total_count": total_count,
+        "users": users
+    }
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user_by_admin(
