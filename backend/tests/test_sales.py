@@ -44,7 +44,7 @@ async def test_create_sales_order_success(client: AsyncClient, sample_customer: 
         "lines": [
             {
                 "product_id": str(sample_product.id),
-                "quantity_ordered": 5.0
+                "quantity_ordered": 25.0
             }
         ]
     }
@@ -63,7 +63,7 @@ async def test_create_sales_order_success(client: AsyncClient, sample_customer: 
     lines = lines_result.scalars().all()
     assert len(lines) == 1
     assert lines[0].unit_price == 100.0  # matches sample_product.sales_price
-    assert lines[0].quantity_ordered == 5.0
+    assert lines[0].quantity_ordered == 25.0
 
 async def test_confirm_sales_order_success(client: AsyncClient, sample_customer: Customer, sample_product: Product, db_session: AsyncSession):
     # 1. Create order
@@ -72,7 +72,7 @@ async def test_confirm_sales_order_success(client: AsyncClient, sample_customer:
         "lines": [
             {
                 "product_id": str(sample_product.id),
-                "quantity_ordered": 5.0
+                "quantity_ordered": 25.0
             }
         ]
     }
@@ -89,15 +89,15 @@ async def test_confirm_sales_order_success(client: AsyncClient, sample_customer:
     order = order_res.scalars().first()
     assert order.status == SalesOrderStatus.Confirmed
 
-    # 4. Verify stock reservation is updated: initial reserved (2.0) + order qty (5.0) = 7.0
+    # 4. Verify stock reservation is updated: initial reserved (2.0) + order qty (25.0) = 27.0
     prod_res = await db_session.execute(select(Product).where(Product.id == sample_product.id))
     product = prod_res.scalars().first()
-    assert product.reserved_qty == 7.0
+    assert product.reserved_qty == 27.0
 
 async def test_confirm_order_not_draft_error(client: AsyncClient, sample_customer: Customer, sample_product: Product):
     order_data = {
         "customer_id": str(sample_customer.id),
-        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 1.0}]
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 25.0}]
     }
     create_res = await client.post("/api/v1/sales-orders/", json=order_data)
     order_id = create_res.json()["id"]
@@ -162,7 +162,7 @@ async def test_deliver_order_not_confirmed_error(client: AsyncClient, sample_cus
     # Try to deliver a draft order directly without confirming it first
     order_data = {
         "customer_id": str(sample_customer.id),
-        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 1.0}]
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 25.0}]
     }
     create_res = await client.post("/api/v1/sales-orders/", json=order_data)
     order_id = create_res.json()["id"]
@@ -204,7 +204,7 @@ async def test_cancel_draft_sales_order_success(client: AsyncClient, sample_cust
     # 1. Create draft order
     order_data = {
         "customer_id": str(sample_customer.id),
-        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 5.0}]
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 25.0}]
     }
     create_res = await client.post("/api/v1/sales-orders/", json=order_data)
     order_id = create_res.json()["id"]
@@ -223,16 +223,16 @@ async def test_cancel_confirmed_sales_order_releases_stock(client: AsyncClient, 
     # 1. Create draft order
     order_data = {
         "customer_id": str(sample_customer.id),
-        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 5.0}]
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 25.0}]
     }
     create_res = await client.post("/api/v1/sales-orders/", json=order_data)
     order_id = create_res.json()["id"]
 
-    # 2. Confirm order (reserves 5.0 widgets)
+    # 2. Confirm order (reserves 25.0 widgets)
     await client.post(f"/api/v1/sales-orders/{order_id}/confirm")
     prod_res = await db_session.execute(select(Product).where(Product.id == sample_product.id))
     product = prod_res.scalars().first()
-    assert product.reserved_qty == 7.0  # 2.0 (initial) + 5.0 (ordered)
+    assert product.reserved_qty == 27.0  # 2.0 (initial) + 25.0 (ordered)
 
     # 3. Cancel order (releases reservation)
     cancel_res = await client.post(f"/api/v1/sales-orders/{order_id}/cancel")
@@ -259,5 +259,26 @@ async def test_cancel_delivered_order_error(client: AsyncClient, sample_customer
     cancel_res = await client.post(f"/api/v1/sales-orders/{order_id}/cancel")
     assert cancel_res.status_code == 400
     assert "Cannot cancel" in cancel_res.json()["detail"]
+
+
+async def test_create_sales_order_auto_confirm_success(client: AsyncClient, sample_customer: Customer, sample_product: Product, db_session: AsyncSession):
+    # Ask for 5.0 units when free stock is 18.0 (available)
+    order_data = {
+        "customer_id": str(sample_customer.id),
+        "lines": [
+            {
+                "product_id": str(sample_product.id),
+                "quantity_ordered": 5.0
+            }
+        ]
+    }
+    response = await client.post("/api/v1/sales-orders/", json=order_data)
+    assert response.status_code == 201
+    res_json = response.json()
+    assert res_json["status"] == "Confirmed"
+    
+    # Verify reservation is automatically incremented: initial (2.0) + order (5.0) = 7.0
+    await db_session.refresh(sample_product)
+    assert sample_product.reserved_qty == 7.0
 
 

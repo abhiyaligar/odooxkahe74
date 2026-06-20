@@ -52,17 +52,11 @@ async def create_sales_order(
     if expected_delivery_date and expected_delivery_date.tzinfo is not None:
         expected_delivery_date = expected_delivery_date.replace(tzinfo=None)
         
-    db_order = SalesOrder(
-        order_number=order_number,
-        customer_id=order_in.customer_id,
-        expected_delivery_date=expected_delivery_date,
-        created_by=current_user.id
-    )
-    db.add(db_order)
-    await db.flush() # To get the db_order.id
+    # Check stock availability for all lines
+    all_available = True
+    product_lines = []
     
     for line in order_in.lines:
-        # Fetch product price & check existence
         result = await db.execute(select(Product).where(Product.id == line.product_id))
         product = result.scalars().first()
         if not product:
@@ -70,7 +64,24 @@ async def create_sales_order(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Product {line.product_id} not found"
             )
-            
+        free_qty = product.on_hand_qty - product.reserved_qty
+        if free_qty < line.quantity_ordered:
+            all_available = False
+        product_lines.append((line, product))
+        
+    order_status = SalesOrderStatus.Confirmed if all_available else SalesOrderStatus.Draft
+        
+    db_order = SalesOrder(
+        order_number=order_number,
+        customer_id=order_in.customer_id,
+        expected_delivery_date=expected_delivery_date,
+        created_by=current_user.id,
+        status=order_status
+    )
+    db.add(db_order)
+    await db.flush() # To get the db_order.id
+    
+    for line, product in product_lines:
         db_line = SalesOrderLine(
             sales_order_id=db_order.id,
             product_id=line.product_id,
@@ -78,6 +89,8 @@ async def create_sales_order(
             unit_price=line.unit_price if line.unit_price is not None else product.sales_price
         )
         db.add(db_line)
+        if all_available:
+            product.reserved_qty += line.quantity_ordered
         
     await log_action(
         db=db,
@@ -88,7 +101,7 @@ async def create_sales_order(
         action="Create",
         field_changed="status",
         old_val=None,
-        new_val="Draft"
+        new_val=order_status.value
     )
     await db.commit()
     
