@@ -20,7 +20,8 @@ import {
   UserPlus,
   Activity,
   LogOut,
-  Settings
+  Menu,
+  X
 } from 'lucide-react';
 
 export const Layout = ({ children }) => {
@@ -28,6 +29,7 @@ export const Layout = ({ children }) => {
   const location = useLocation();
   const { currentRole, setCurrentRole, globalSearch, setGlobalSearch, logout } = useErpStore();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   const { data: currentUser } = useQuery({
@@ -126,40 +128,44 @@ export const Layout = ({ children }) => {
   const activeItem = navigationItems.find(item => item.path === currentPath);
   const pageTitle = activeItem ? activeItem.name : "Shiv Furniture Works";
 
-  // Redirect if role changes and loses access to current page
-  const handleRoleChange = (role) => {
-    setCurrentRole(role);
-    setShowRoleDropdown(false);
-
-    // Check if new role has access to current path
-    const targetItem = navigationItems.find(item => item.path === currentPath);
-    if (targetItem && !targetItem.roles.includes(role)) {
-      // Find the first page the new role has access to
-      const fallbackItem = navigationItems.find(item => item.roles.includes(role));
-      if (fallbackItem) {
-        navigate(fallbackItem.path);
-      }
-    }
-  };
-
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-textPrimary">
-      {/* Sidebar */}
+      
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden transition-opacity"
+        />
+      )}
+
+      {/* Sidebar - Desktop and Mobile (Drawer) */}
       <aside
-        className={`flex flex-col border-r border-border bg-card transition-all duration-150 relative ${isCollapsed ? 'w-16' : 'w-60'
-          }`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-border bg-card transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${isCollapsed ? 'lg:w-16' : 'lg:w-60'}`}
       >
         {/* Logo Section */}
-        <div className="flex h-16 items-center justify-between border-b border-border px-4">
-          {!isCollapsed && (
+        <div className="flex h-16 items-center justify-between border-b border-border px-4 relative">
+          {(!isCollapsed || isMobileMenuOpen) ? (
             <div className="flex flex-col">
               <span className="font-semibold tracking-wide text-sm">SHIV FURNITURE</span>
               <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono">ERP Works</span>
             </div>
-          )}
-          {isCollapsed && (
+          ) : (
             <span className="mx-auto font-bold text-sm tracking-tighter">SF</span>
           )}
+
+          {/* Close button for mobile menu */}
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-1 rounded-custom hover:bg-elevated/80 text-textSecondary hover:text-textPrimary lg:hidden"
+            title="Close Menu"
+          >
+            <X size={18} />
+          </button>
+
+          {/* Collapse toggle for desktop */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden lg:flex h-6 w-6 items-center justify-center rounded-custom border border-border bg-elevated hover:bg-card text-textSecondary hover:text-textPrimary transition-all duration-150 absolute -right-3 top-5 z-10 shadow-lg"
@@ -169,7 +175,7 @@ export const Layout = ({ children }) => {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 space-y-1 py-4">
+        <nav className="flex-1 space-y-1 py-4 overflow-y-auto">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname.startsWith(item.path);
@@ -177,14 +183,17 @@ export const Layout = ({ children }) => {
             return (
               <button
                 key={item.name}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  navigate(item.path);
+                  setIsMobileMenuOpen(false); // Auto close mobile drawer on navigate
+                }}
                 className={`flex w-full items-center py-3 px-4 text-left transition-all duration-150 border-l-[3px] ${isActive
                     ? 'bg-accent/10 border-accent text-textPrimary'
                     : 'text-textSecondary hover:bg-elevated/40 hover:text-textPrimary border-transparent'
                   }`}
               >
                 <Icon size={18} className={`${isActive ? 'text-textPrimary' : 'text-textSecondary'} shrink-0`} />
-                {!isCollapsed && (
+                {(!isCollapsed || isMobileMenuOpen) && (
                   <span className="ml-3 text-sm font-medium tracking-wide">
                     {item.name}
                   </span>
@@ -193,22 +202,32 @@ export const Layout = ({ children }) => {
             );
           })}
         </nav>
-
-
       </aside>
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex h-16 w-full items-center justify-between border-b border-border bg-card px-6">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-semibold tracking-tight">{pageTitle}</h1>
+        <header className="flex h-16 w-full items-center justify-between border-b border-border bg-card px-4 sm:px-6 shrink-0">
+          
+          {/* Mobile hamburger menu trigger + Title */}
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-1.5 rounded-custom border border-border bg-elevated text-textSecondary hover:text-textPrimary lg:hidden shrink-0"
+              title="Open Menu"
+            >
+              <Menu size={18} />
+            </button>
+            <h1 className="text-sm sm:text-lg font-semibold tracking-tight truncate max-w-[120px] sm:max-w-none">
+              {pageTitle}
+            </h1>
           </div>
 
-          {/* Global Search & Action Area */}
-          <div className="flex items-center space-x-4">
-            {/* Global Search Bar */}
-            <div className="relative w-64">
+          {/* Header Action Items */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            
+            {/* Global Search - Hidden on small mobile screens */}
+            <div className="relative w-36 sm:w-64 hidden md:block">
               <Search className="absolute left-3 top-2.5 text-textMuted" size={14} />
               <input
                 type="text"
@@ -219,23 +238,24 @@ export const Layout = ({ children }) => {
               />
             </div>
 
-            {/* Theme Switcher Toggle */}
+            {/* Theme Toggle Button */}
             <ThemeToggle />
 
-            {/* Role Display */}
+            {/* Role Display Tag */}
             <div
-              className="flex items-center space-x-2 bg-elevated border border-border rounded-custom px-3 py-1.5 text-xs text-textPrimary font-medium"
+              className="flex items-center space-x-1.5 bg-elevated border border-border rounded-custom px-2.5 py-1.5 text-xs text-textPrimary font-medium shrink-0"
               title={`Current permissions bound to: ${roleDisplayNames[currentRole]}`}
             >
               <ShieldAlert size={14} className="text-textSecondary" />
-              <span>{roleDisplayNames[currentRole]}</span>
+              <span className="hidden sm:inline">{roleDisplayNames[currentRole]}</span>
+              <span className="sm:hidden">{roleInitials[currentRole]}</span>
             </div>
 
             {/* User Avatar linking to Profile */}
             <button
               onClick={() => navigate('/profile')}
               title="My Profile"
-              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary transition-all duration-150 overflow-hidden"
+              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary transition-all duration-150 overflow-hidden shrink-0"
             >
               {currentUser?.avatar_url ? (
                 <img 
@@ -256,15 +276,15 @@ export const Layout = ({ children }) => {
                 }
               }}
               title="Sign Out"
-              className="p-1.5 rounded-custom border border-border bg-elevated hover:bg-card flex items-center justify-center text-textSecondary hover:text-danger transition-colors duration-150"
+              className="p-1.5 rounded-custom border border-border bg-elevated hover:bg-card flex items-center justify-center text-textSecondary hover:text-danger transition-colors duration-150 shrink-0"
             >
               <LogOut size={16} />
             </button>
           </div>
         </header>
 
-        {/* Dashboard/Page Content */}
-        <main className="flex-1 overflow-y-auto bg-background p-6">
+        {/* Dynamic Page Component Render */}
+        <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6">
           {children}
         </main>
       </div>
