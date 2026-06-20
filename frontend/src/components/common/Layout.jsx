@@ -39,6 +39,7 @@ export const Layout = ({ children }) => {
   const roleDisplayNames = {
     SuperAdmin: "Super Admin",
     StoreAdmin: "Store Admin",
+    UserAdmin: "User Admin",
     SalesUser: "Sales User",
     PurchaseUser: "Purchase User",
     ManufacturingUser: "Manufacturing User",
@@ -50,6 +51,7 @@ export const Layout = ({ children }) => {
   const roleInitials = {
     SuperAdmin: "SA",
     StoreAdmin: "AD",
+    UserAdmin: "UA",
     SalesUser: "SU",
     PurchaseUser: "PU",
     ManufacturingUser: "MU",
@@ -106,7 +108,7 @@ export const Layout = ({ children }) => {
       name: "Users",
       path: "/users",
       icon: UserPlus,
-      roles: ["SuperAdmin", "StoreAdmin"]
+      roles: ["SuperAdmin", "StoreAdmin", "UserAdmin"]
     },
     {
       name: "Audit Logs",

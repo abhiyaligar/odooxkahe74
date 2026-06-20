@@ -5,8 +5,8 @@ from typing import List
 from uuid import UUID
 
 from app.db.session import get_db
-from app.models.pg_models import Product, UserRole, User
-from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
+from app.models.pg_models import Product, UserRole, User, StockLedgerEntry, LedgerReason
+from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse, StockLedgerEntryResponse
 from app.api.dependencies import get_current_user, RoleChecker
 from app.services.audit import log_action
 
@@ -79,6 +79,93 @@ async def list_components(skip: int = 0, limit: int = 100, db: AsyncSession = De
     )
     products = result.scalars().all()
     return [compute_free_qty(p) for p in products]
+
+@router.get("/stock-ledger", response_model=List[StockLedgerEntryResponse])
+async def get_all_stock_ledger_entries(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = select(
+        StockLedgerEntry.id,
+        StockLedgerEntry.product_id,
+        StockLedgerEntry.change_qty,
+        StockLedgerEntry.reason,
+        StockLedgerEntry.reference_type,
+        StockLedgerEntry.reference_id,
+        StockLedgerEntry.resulting_on_hand_qty,
+        StockLedgerEntry.created_at,
+        StockLedgerEntry.created_by,
+        Product.name.label("product_name")
+    ).join(Product, StockLedgerEntry.product_id == Product.id).order_by(StockLedgerEntry.created_at.desc())
+    
+    result = await db.execute(query)
+    return result.mappings().all()
+
+@router.get("/stock-movement-trend")
+async def get_stock_movement_trend(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+
+    # 1. Get current totals
+    prod_res = await db.execute(select(Product.on_hand_qty, Product.reserved_qty))
+    products_list = prod_res.all()
+    
+    current_on_hand = sum(p[0] for p in products_list) or 0.0
+    current_reserved = sum(p[1] for p in products_list) or 0.0
+
+    # 2. Fetch ledger entries in the last 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    
+    ledger_res = await db.execute(
+        select(StockLedgerEntry.change_qty, StockLedgerEntry.created_at, StockLedgerEntry.reason)
+        .where(StockLedgerEntry.created_at >= seven_days_ago)
+        .order_by(StockLedgerEntry.created_at.desc())
+    )
+    entries = ledger_res.all()
+
+    # 3. Reconstruct day-by-day backwards
+    days_data = []
+    
+    running_on_hand = current_on_hand
+    running_reserved = current_reserved
+
+    # Group changes by YYYY-MM-DD
+    on_hand_changes = defaultdict(float)
+    reserved_changes = defaultdict(float)
+
+    for change_qty, created_at, reason in entries:
+        date_str = created_at.strftime("%Y-%m-%d")
+        on_hand_changes[date_str] += change_qty
+        if reason in [LedgerReason.SaleDelivery, LedgerReason.ManufacturingConsume]:
+            reserved_changes[date_str] += change_qty
+
+    # Walk backwards 7 days
+    today_dt = datetime.utcnow()
+    for i in range(7):
+        day_dt = today_dt - timedelta(days=i)
+        day_label = day_dt.strftime("%b %d")
+        date_key = day_dt.strftime("%Y-%m-%d")
+
+        days_data.append({
+            "day": day_label,
+            "onHand": round(max(0.0, running_on_hand), 2),
+            "reserved": round(max(0.0, running_reserved), 2)
+        })
+
+        # Roll back on_hand
+        day_change = on_hand_changes.get(date_key, 0.0)
+        running_on_hand -= day_change
+
+        # Roll back reserved
+        day_res_change = reserved_changes.get(date_key, 0.0)
+        running_reserved -= day_res_change
+
+    # Reverse to return chronologically
+    days_data.reverse()
+    return days_data
 
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)):

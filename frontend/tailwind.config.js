@@ -14,6 +14,7 @@ export default {
         elevated: "var(--surface-elevated)",
         accent: "var(--accent)",
         accentForeground: "var(--accent-foreground)",
+        "accent-foreground": "var(--accent-foreground)",
         textPrimary: "var(--foreground)",
         textSecondary: "var(--muted-foreground)",
         textMuted: "var(--disabled)",

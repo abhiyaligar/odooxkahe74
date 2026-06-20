@@ -239,3 +239,82 @@ async def test_create_user_by_salesuser_forbidden(client: AsyncClient, db_sessio
         assert "Only administrator roles are permitted to create users" in response.json()["detail"]
     finally:
         app.dependency_overrides.clear()
+
+async def test_update_user_by_admin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+    
+    # Create user to update
+    from app.core.security import get_password_hash
+    test_user = User(
+        id=uuid.uuid4(),
+        name="Target User",
+        email="target@example.com",
+        password_hash=get_password_hash("password123"),
+        role=UserRole.SalesUser,
+        is_active=True
+    )
+    db_session.add(test_user)
+    await db_session.commit()
+
+    async def _get_mock_superadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Super",
+            email="super@example.com",
+            role=UserRole.SuperAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_superadmin
+
+    try:
+        update_data = {
+            "name": "Updated Name",
+            "role": "UserAdmin",
+            "is_active": False
+        }
+        response = await client.put(f"/api/v1/auth/users/{test_user.id}", json=update_data)
+        assert response.status_code == 200
+        res_json = response.json()
+        assert res_json["name"] == "Updated Name"
+        assert res_json["role"] == "UserAdmin"
+        assert res_json["is_active"] is False
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_delete_user_by_admin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+    
+    # Create user to delete
+    from app.core.security import get_password_hash
+    test_user = User(
+        id=uuid.uuid4(),
+        name="Target User 2",
+        email="target2@example.com",
+        password_hash=get_password_hash("password123"),
+        role=UserRole.SalesUser,
+        is_active=True
+    )
+    db_session.add(test_user)
+    await db_session.commit()
+
+    async def _get_mock_superadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Super",
+            email="super@example.com",
+            role=UserRole.SuperAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_superadmin
+
+    try:
+        response = await client.delete(f"/api/v1/auth/users/{test_user.id}")
+        assert response.status_code == 204
+    finally:
+        app.dependency_overrides.clear()

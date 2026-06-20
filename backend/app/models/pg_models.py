@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship
 class UserRole(str, enum.Enum):
     SuperAdmin = "SuperAdmin"
     StoreAdmin = "StoreAdmin"
+    UserAdmin = "UserAdmin"
     SalesUser = "SalesUser"
     PurchaseUser = "PurchaseUser"
     ManufacturingUser = "ManufacturingUser"
