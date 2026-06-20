@@ -19,3 +19,9 @@ This is the backend API project built with FastAPI.
    ```bash
    uvicorn app.main:app --reload
    ```
+
+## Validation & Schemas
+
+The API leverages Pydantic for strict data validation:
+- **Phone Numbers**: Phone number fields automatically default to prefixing `+91` if exactly 10 digits are provided, and enforce exactly 10 digits after the country code.
+- **Strict Typing**: All schemas enforce minimum and maximum lengths for strings, bounds for numeric values, and valid email formats for better data integrity.
