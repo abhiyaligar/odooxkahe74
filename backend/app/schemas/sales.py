@@ -9,7 +9,7 @@ class SalesOrderLineBase(BaseModel):
     quantity_ordered: float
 
 class SalesOrderLineCreate(SalesOrderLineBase):
-    pass
+    unit_price: Optional[float] = None
 
 class SalesOrderLineResponse(SalesOrderLineBase):
     id: UUID

@@ -14,6 +14,7 @@ class UserRole(str, enum.Enum):
     ManufacturingUser = "ManufacturingUser"
     InventoryManager = "InventoryManager"
     BusinessOwner = "BusinessOwner"
+    Customer = "Customer"
 
 class User(Base):
     __tablename__ = "users"

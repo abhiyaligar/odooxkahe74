@@ -174,7 +174,8 @@ export default function SalesOrders() {
       expected_delivery_date: new Date(deliveryDate).toISOString(),
       lines: orderLines.map(l => ({
         product_id: l.product_id,
-        quantity_ordered: l.quantity_ordered
+        quantity_ordered: l.quantity_ordered,
+        unit_price: l.unit_price
       }))
     };
 
@@ -434,7 +435,7 @@ export default function SalesOrders() {
                         disabled={createSalesOrderMutation.isPending}
                       >
                         <option value="">Select Product...</option>
-                        {products.filter(p => p.type === "FinishedGood").map(p => (
+                        {products.map(p => (
                           <option key={p.id} value={p.id}>{p.name} (${p.sales_price})</option>
                         ))}
                       </select>
@@ -454,9 +455,20 @@ export default function SalesOrders() {
                       />
                     </div>
 
-                    {/* Price (Display Only as API infers from product config if not sent) */}
-                    <div className="w-28 text-right font-mono text-xs text-textSecondary pr-2">
-                      ${line.unit_price.toFixed(2)}
+                    {/* Price */}
+                    <div className="w-28 relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-textSecondary text-xs">$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Price"
+                        value={line.unit_price}
+                        onChange={(e) => handleLinePriceChange(idx, e.target.value)}
+                        className="w-full text-xs font-mono text-right pl-5"
+                        required
+                        disabled={createSalesOrderMutation.isPending}
+                      />
                     </div>
 
                     {/* Remove button */}
