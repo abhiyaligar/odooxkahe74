@@ -200,3 +200,64 @@ async def test_deliver_order_insufficient_stock_error(client: AsyncClient, sampl
     assert deliver_res.status_code == 400
     assert "Insufficient stock" in deliver_res.json()["detail"]
 
+async def test_cancel_draft_sales_order_success(client: AsyncClient, sample_customer: Customer, sample_product: Product, db_session: AsyncSession):
+    # 1. Create draft order
+    order_data = {
+        "customer_id": str(sample_customer.id),
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 5.0}]
+    }
+    create_res = await client.post("/api/v1/sales-orders/", json=order_data)
+    order_id = create_res.json()["id"]
+
+    # 2. Cancel order
+    cancel_res = await client.post(f"/api/v1/sales-orders/{order_id}/cancel")
+    assert cancel_res.status_code == 200
+    assert cancel_res.json()["message"] == "Order cancelled successfully."
+
+    # 3. Verify status in database
+    order_res = await db_session.execute(select(SalesOrder).where(SalesOrder.id == uuid.UUID(order_id)))
+    order = order_res.scalars().first()
+    assert order.status == SalesOrderStatus.Cancelled
+
+async def test_cancel_confirmed_sales_order_releases_stock(client: AsyncClient, sample_customer: Customer, sample_product: Product, db_session: AsyncSession):
+    # 1. Create draft order
+    order_data = {
+        "customer_id": str(sample_customer.id),
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 5.0}]
+    }
+    create_res = await client.post("/api/v1/sales-orders/", json=order_data)
+    order_id = create_res.json()["id"]
+
+    # 2. Confirm order (reserves 5.0 widgets)
+    await client.post(f"/api/v1/sales-orders/{order_id}/confirm")
+    prod_res = await db_session.execute(select(Product).where(Product.id == sample_product.id))
+    product = prod_res.scalars().first()
+    assert product.reserved_qty == 7.0  # 2.0 (initial) + 5.0 (ordered)
+
+    # 3. Cancel order (releases reservation)
+    cancel_res = await client.post(f"/api/v1/sales-orders/{order_id}/cancel")
+    assert cancel_res.status_code == 200
+    assert cancel_res.json()["message"] == "Order cancelled successfully."
+
+    await db_session.refresh(product)
+    assert product.reserved_qty == 2.0  # should revert back to 2.0
+
+async def test_cancel_delivered_order_error(client: AsyncClient, sample_customer: Customer, sample_product: Product):
+    # 1. Create order
+    order_data = {
+        "customer_id": str(sample_customer.id),
+        "lines": [{"product_id": str(sample_product.id), "quantity_ordered": 5.0}]
+    }
+    create_res = await client.post("/api/v1/sales-orders/", json=order_data)
+    order_id = create_res.json()["id"]
+
+    # 2. Confirm & deliver
+    await client.post(f"/api/v1/sales-orders/{order_id}/confirm")
+    await client.post(f"/api/v1/sales-orders/{order_id}/deliver")
+
+    # 3. Try to cancel
+    cancel_res = await client.post(f"/api/v1/sales-orders/{order_id}/cancel")
+    assert cancel_res.status_code == 400
+    assert "Cannot cancel" in cancel_res.json()["detail"]
+
+

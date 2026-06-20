@@ -325,8 +325,8 @@ export default function PurchaseOrders() {
             ) : (
               filteredOrders.map((po) => {
                 const vendor = vendors.find(v => v.id === po.vendor_id);
-                const itemsCount = getOrderItemCount(po.id);
-                const total = getOrderTotal(po.id);
+                const itemsCount = getOrderItemCount(po);
+                const total = getOrderTotal(po);
                 
                 return (
                   <tr 
@@ -618,7 +618,7 @@ export default function PurchaseOrders() {
 
               {/* Action Buttons Row */}
               <div className="pt-4 border-t border-border flex items-center justify-between">
-                {canModify && selectedOrder.status === "Draft" && (
+                {canModify && selectedOrder.status !== "FullyReceived" && selectedOrder.status !== "Cancelled" && (
                   <button
                     type="button"
                     onClick={handleCancel}

@@ -81,6 +81,16 @@ export default function SalesOrders() {
     onError: (err) => alert("Failed to deliver sales order: " + err.message)
   });
 
+  const cancelSalesOrderMutation = useMutation({
+    mutationFn: (id) => api.post(`/sales-orders/${id}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] }); 
+      setIsSlideOverOpen(false);
+    },
+    onError: (err) => alert("Failed to cancel sales order: " + err.message)
+  });
+
   // Keep selected order in sync with fresh data
   useEffect(() => {
     if (selectedOrder) {
@@ -189,8 +199,9 @@ export default function SalesOrders() {
 
   const handleCancel = () => {
     if (!canModify || !selectedOrder) return;
-    // Backend doesn't have a cancel endpoint in openapi, just confirm and deliver.
-    alert("Cancellation endpoint not available in backend API.");
+    if (window.confirm("Are you sure you want to cancel this Sales Order?")) {
+      cancelSalesOrderMutation.mutate(selectedOrder.id);
+    }
   };
 
   const handleDeliver = () => {
@@ -654,7 +665,7 @@ export default function SalesOrders() {
 
               {/* Action Buttons Row */}
               <div className="pt-4 border-t border-border flex items-center justify-between">
-                {canModify && selectedOrder.status === "Draft" && (
+                {canModify && selectedOrder.status !== "FullyDelivered" && selectedOrder.status !== "Cancelled" && (
                   <button
                     type="button"
                     onClick={handleCancel}

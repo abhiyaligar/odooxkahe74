@@ -188,3 +188,29 @@ async def deliver_sales_order(order_id: UUID, db: AsyncSession = Depends(get_db)
             
     await db.commit()
     return {"message": "Order delivered and stock ledger updated."}
+
+@router.post("/{order_id}/cancel", dependencies=[Depends(write_checker)])
+async def cancel_sales_order(order_id: UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(SalesOrder).where(SalesOrder.id == order_id))
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status in [SalesOrderStatus.FullyDelivered, SalesOrderStatus.Cancelled]:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot cancel a fully delivered or already cancelled order"
+        )
+
+    # Release stock if it was Confirmed
+    if order.status == SalesOrderStatus.Confirmed:
+        lines_result = await db.execute(select(SalesOrderLine).where(SalesOrderLine.sales_order_id == order.id))
+        lines = lines_result.scalars().all()
+        for line in lines:
+            prod_res = await db.execute(select(Product).where(Product.id == line.product_id))
+            product = prod_res.scalars().first()
+            if product:
+                product.reserved_qty = max(0.0, product.reserved_qty - line.quantity_ordered)
+
+    order.status = SalesOrderStatus.Cancelled
+    await db.commit()
+    return {"message": "Order cancelled successfully."}
