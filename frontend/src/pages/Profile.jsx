@@ -51,11 +51,11 @@ export default function Profile() {
     );
   }
 
-  const profileName = currentUser?.name || currentUser?.username || currentUser?.email?.split('@')[0] || "Unknown User";
+  const profileName = currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || currentUser?.email?.split('@')[0] || "Unknown User";
   
   useEffect(() => {
-    if (currentUser?.name && !isEditing) {
-      setEditName(currentUser.name);
+    if ((currentUser?.name || currentUser?.customer_profile?.name) && !isEditing) {
+      setEditName(currentUser.name || currentUser.customer_profile?.name);
     }
   }, [currentUser, isEditing]);
 

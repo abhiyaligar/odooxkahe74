@@ -839,7 +839,7 @@ export default function CustomerPortal() {
               {!isEditingProfile ? (
                 <button 
                   onClick={() => {
-                    setEditProfileName(currentUser?.name || currentUser?.username || "Customer User");
+                    setEditProfileName(currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || "Customer User");
                     setIsEditingProfile(true);
                   }}
                   className="bg-elevated border border-border hover:bg-card text-textPrimary px-3 py-1.5 rounded-custom text-xs font-semibold transition-colors"
@@ -889,7 +889,7 @@ export default function CustomerPortal() {
                       autoFocus
                     />
                   ) : (
-                    <h3 className="text-lg font-bold text-textPrimary">{currentUser?.name || currentUser?.username || "Customer User"}</h3>
+                    <h3 className="text-lg font-bold text-textPrimary">{currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || "Customer User"}</h3>
                   )}
                   <p className="text-sm text-textSecondary flex items-center mt-1">
                     <Mail size={14} className="mr-1.5" />
