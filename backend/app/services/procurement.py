@@ -19,7 +19,8 @@ from app.models.pg_models import (
     PurchaseOrderSource,
     PurchaseOrderLine,
     PaymentStatus,
-    PaymentMethod
+    PaymentMethod,
+    User
 )
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,8 @@ async def trigger_procurement(
     product_id: UUID,
     shortage_qty: float,
     db: AsyncSession,
-    depth: int = 0
+    depth: int = 0,
+    user: User | None = None
 ) -> None:
     if shortage_qty <= 0:
         return
@@ -48,6 +50,8 @@ async def trigger_procurement(
         logger.info(f"Product {product.name} ({product_id}) does not have procure_on_demand enabled. Skipping auto-procurement.")
         return
 
+    from app.services.audit import log_action
+
     # 2. Case: Manufacturing
     if product.procurement_type == ProcurementType.Manufacturing:
         if not product.bom_id:
@@ -65,6 +69,19 @@ async def trigger_procurement(
         )
         db.add(db_mo)
         await db.flush()
+
+        # LOG AUDIT LOG
+        await log_action(
+            db=db,
+            user=user,
+            module="Manufacturing",
+            record_type="ManufacturingOrder",
+            record_id=db_mo.id,
+            action="Create",
+            field_changed="status",
+            old_val=None,
+            new_val="Draft"
+        )
 
         # Generate default work orders
         ops_res = await db.execute(
@@ -84,7 +101,7 @@ async def trigger_procurement(
             db.add(wo)
 
         # Trigger recursive procurement checks for components of the new MO
-        await check_mo_components_for_procurement(db_mo.id, db, depth + 1)
+        await check_mo_components_for_procurement(db_mo.id, db, depth + 1, user=user)
 
     # 3. Case: Purchase
     elif product.procurement_type == ProcurementType.Purchase:
@@ -103,6 +120,7 @@ async def trigger_procurement(
         )
         db_po = po_res.scalars().first()
 
+        created_new_po = False
         if not db_po:
             order_number = f"PO-AUTO-{uuid.uuid4().hex[:6].upper()}"
             db_po = PurchaseOrder(
@@ -115,6 +133,20 @@ async def trigger_procurement(
             )
             db.add(db_po)
             await db.flush()
+            created_new_po = True
+
+            # LOG AUDIT LOG for PO Creation
+            await log_action(
+                db=db,
+                user=user,
+                module="Purchase",
+                record_type="PurchaseOrder",
+                record_id=db_po.id,
+                action="Create",
+                field_changed="status",
+                old_val=None,
+                new_val="Draft"
+            )
 
         # Add or update line on the PO
         line_res = await db.execute(
@@ -127,7 +159,21 @@ async def trigger_procurement(
         db_line = line_res.scalars().first()
 
         if db_line:
+            old_qty = db_line.quantity_ordered
             db_line.quantity_ordered += shortage_qty
+            
+            # LOG AUDIT LOG for PO line update
+            await log_action(
+                db=db,
+                user=user,
+                module="Purchase",
+                record_type="PurchaseOrder",
+                record_id=db_po.id,
+                action="Update",
+                field_changed="quantity_ordered",
+                old_val=str(old_qty),
+                new_val=str(db_line.quantity_ordered)
+            )
         else:
             db_line = PurchaseOrderLine(
                 purchase_order_id=db_po.id,
@@ -136,11 +182,26 @@ async def trigger_procurement(
                 unit_cost=product.cost_price
             )
             db.add(db_line)
+            
+            # LOG AUDIT LOG for PO update adding lines
+            if not created_new_po:
+                await log_action(
+                    db=db,
+                    user=user,
+                    module="Purchase",
+                    record_type="PurchaseOrder",
+                    record_id=db_po.id,
+                    action="Update",
+                    field_changed="lines",
+                    old_val=None,
+                    new_val=f"Added product {product.name}"
+                )
 
 async def check_mo_components_for_procurement(
     mo_id: UUID,
     db: AsyncSession,
-    depth: int = 0
+    depth: int = 0,
+    user: User | None = None
 ) -> None:
     # 1. Fetch MO details
     mo_res = await db.execute(select(ManufacturingOrder).where(ManufacturingOrder.id == mo_id))
@@ -163,4 +224,4 @@ async def check_mo_components_for_procurement(
             shortage = required_qty - free_qty
             
             if shortage > 0:
-                await trigger_procurement(product.id, shortage, db, depth)
+                await trigger_procurement(product.id, shortage, db, depth, user=user)

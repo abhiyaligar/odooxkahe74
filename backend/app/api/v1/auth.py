@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
+from typing import List
 
 from app.db.session import get_db
 from app.models.pg_models import User, UserRole, Customer, CustomerCategory
@@ -74,3 +75,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         data={"sub": user.email, "role": user.role}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/users", response_model=List[UserResponse])
+async def list_users(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if current_user.role not in [UserRole.SuperAdmin, UserRole.StoreAdmin]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrator roles can query user profiles list."
+        )
+    result = await db.execute(select(User).order_by(User.name))
+    return result.scalars().all()

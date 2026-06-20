@@ -8,6 +8,7 @@ from app.api.v1.boms import router as boms_router
 from app.api.v1.manufacturing import router as manufacturing_router
 from app.api.v1.recipes import router as recipes_router
 from app.api.v1.purchase_orders import router as purchase_orders_router
+from app.api.v1.audit_logs import router as audit_logs_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
@@ -41,6 +42,7 @@ app.include_router(boms_router, prefix="/api/v1/boms", tags=["boms"])
 app.include_router(manufacturing_router, prefix="/api/v1/manufacturing-orders", tags=["manufacturing"])
 app.include_router(recipes_router, prefix="/api/v1/recipes", tags=["recipes"])
 app.include_router(purchase_orders_router, prefix="/api/v1/purchase-orders", tags=["purchase-orders"])
+app.include_router(audit_logs_router, prefix="/api/v1/audit-logs", tags=["audit-logs"])
 
 @app.get("/")
 def read_root():

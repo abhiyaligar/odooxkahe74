@@ -321,3 +321,21 @@ class WalletTransaction(Base):
     reference_id = Column(UUID(as_uuid=True), nullable=True)  # References PO, MO etc.
     created_at = Column(DateTime, default=datetime.utcnow)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    performed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    user_name = Column(String, nullable=False)
+    module = Column(String, nullable=False, index=True)
+    record_type = Column(String, nullable=False)
+    record_id = Column(String, nullable=False)
+    action = Column(String, nullable=False, index=True)
+    field_changed = Column(String, nullable=True)
+    old_value = Column(String, nullable=True)
+    new_value = Column(String, nullable=True)
+
+    user = relationship("User")
+

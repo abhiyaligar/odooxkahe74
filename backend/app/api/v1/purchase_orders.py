@@ -26,6 +26,7 @@ from app.schemas.purchase import (
     PurchaseOrderLineReceive
 )
 from app.api.dependencies import get_current_user, RoleChecker
+from app.services.audit import log_action
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -72,6 +73,7 @@ async def get_purchase_order(
 @router.post("/", response_model=PurchaseOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(write_checker)])
 async def create_purchase_order(
     po_in: PurchaseOrderCreate,
+    current_user: User = Depends(write_checker),
     db: AsyncSession = Depends(get_db)
 ):
     order_number = f"PO-{uuid.uuid4().hex[:6].upper()}"
@@ -102,6 +104,17 @@ async def create_purchase_order(
         )
         db.add(db_line)
 
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Purchase",
+        record_type="PurchaseOrder",
+        record_id=db_po.id,
+        action="Create",
+        field_changed="status",
+        old_val=None,
+        new_val="Draft"
+    )
     await db.commit()
     
     res_result = await db.execute(
@@ -114,6 +127,7 @@ async def create_purchase_order(
 @router.post("/{po_id}/confirm", response_model=PurchaseOrderResponse, dependencies=[Depends(write_checker)])
 async def confirm_purchase_order(
     po_id: UUID,
+    current_user: User = Depends(write_checker),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
@@ -128,6 +142,17 @@ async def confirm_purchase_order(
         raise HTTPException(status_code=400, detail="Only Draft purchase orders can be confirmed")
 
     po.status = PurchaseOrderStatus.Confirmed
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Purchase",
+        record_type="PurchaseOrder",
+        record_id=po.id,
+        action="Confirm",
+        field_changed="status",
+        old_val="Draft",
+        new_val="Confirmed"
+    )
     await db.commit()
     await db.refresh(po, ["lines"])
     return po
@@ -136,6 +161,7 @@ async def confirm_purchase_order(
 async def receive_purchase_order_line(
     line_id: UUID,
     receive_in: PurchaseOrderLineReceive,
+    current_user: User = Depends(write_checker),
     db: AsyncSession = Depends(get_db)
 ):
     line_res = await db.execute(
@@ -165,6 +191,7 @@ async def receive_purchase_order_line(
             detail=f"Cannot receive {receive_in.quantity_received}; only {remaining} remaining on order."
         )
 
+    old_qty_received = line.quantity_received
     line.quantity_received += receive_in.quantity_received
 
     prod_res = await db.execute(
@@ -203,6 +230,17 @@ async def receive_purchase_order_line(
     elif any_received:
         po.status = PurchaseOrderStatus.PartiallyReceived
 
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Purchase",
+        record_type="PurchaseOrder",
+        record_id=po.id,
+        action="Receive",
+        field_changed="quantity_received",
+        old_val=str(old_qty_received),
+        new_val=str(line.quantity_received)
+    )
     await db.commit()
     await db.refresh(po, ["lines"])
     return po
@@ -210,6 +248,7 @@ async def receive_purchase_order_line(
 @router.post("/{po_id}/cancel", response_model=PurchaseOrderResponse, dependencies=[Depends(write_checker)])
 async def cancel_purchase_order(
     po_id: UUID,
+    current_user: User = Depends(write_checker),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
@@ -223,7 +262,19 @@ async def cancel_purchase_order(
     if po.status in [PurchaseOrderStatus.FullyReceived, PurchaseOrderStatus.Cancelled]:
         raise HTTPException(status_code=400, detail="Cannot cancel a fully received or already cancelled purchase order")
 
+    old_status = po.status.value if hasattr(po.status, 'value') else str(po.status)
     po.status = PurchaseOrderStatus.Cancelled
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Purchase",
+        record_type="PurchaseOrder",
+        record_id=po.id,
+        action="Cancel",
+        field_changed="status",
+        old_val=old_status,
+        new_val="Cancelled"
+    )
     await db.commit()
     await db.refresh(po, ["lines"])
     return po

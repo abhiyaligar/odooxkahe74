@@ -5,9 +5,10 @@ from typing import List
 from uuid import UUID
 
 from app.db.session import get_db
-from app.models.pg_models import Product, UserRole
+from app.models.pg_models import Product, UserRole, User
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.api.dependencies import get_current_user, RoleChecker
+from app.services.audit import log_action
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 admin_checker = RoleChecker([UserRole.SuperAdmin, UserRole.StoreAdmin])
@@ -18,7 +19,7 @@ def compute_free_qty(product: Product) -> ProductResponse:
     return ProductResponse(**prod_dict)
 
 @router.post("/", response_model=ProductResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(admin_checker)])
-async def create_product(product_in: ProductCreate, db: AsyncSession = Depends(get_db)):
+async def create_product(product_in: ProductCreate, current_user: User = Depends(admin_checker), db: AsyncSession = Depends(get_db)):
     if product_in.procurement_type == "Purchase" and not product_in.vendor_id:
         raise HTTPException(status_code=400, detail="Vendor ID is required for Purchase procurement")
     if product_in.procurement_type == "Manufacturing" and not product_in.bom_id:
@@ -35,6 +36,18 @@ async def create_product(product_in: ProductCreate, db: AsyncSession = Depends(g
 
     db_product = Product(**product_data)
     db.add(db_product)
+    await db.flush()
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Inventory",
+        record_type="Product",
+        record_id=db_product.id,
+        action="Create",
+        field_changed="name",
+        old_val=None,
+        new_val=db_product.name
+    )
     await db.commit()
     await db.refresh(db_product)
     return compute_free_qty(db_product)
@@ -76,7 +89,7 @@ async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)):
     return compute_free_qty(product)
 
 @router.put("/{product_id}", response_model=ProductResponse, dependencies=[Depends(admin_checker)])
-async def update_product(product_id: UUID, product_in: ProductUpdate, db: AsyncSession = Depends(get_db)):
+async def update_product(product_id: UUID, product_in: ProductUpdate, current_user: User = Depends(admin_checker), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Product).where(Product.id == product_id))
     db_product = result.scalars().first()
     if not db_product:
@@ -104,18 +117,38 @@ async def update_product(product_id: UUID, product_in: ProductUpdate, db: AsyncS
     for field, value in update_data.items():
         setattr(db_product, field, value)
 
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Inventory",
+        record_type="Product",
+        record_id=db_product.id,
+        action="Update",
+        field_changed="details",
+        old_val=None,
+        new_val="Product updated"
+    )
     await db.commit()
     await db.refresh(db_product)
     return compute_free_qty(db_product)
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(admin_checker)])
-async def delete_product(product_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_product(product_id: UUID, current_user: User = Depends(admin_checker), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalars().first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
         
-    # In a real ERP we would check for active Orders before deleting or soft-delete instead.
-    # We will do a hard delete for now.
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Inventory",
+        record_type="Product",
+        record_id=product.id,
+        action="Delete",
+        field_changed="name",
+        old_val=product.name,
+        new_val=None
+    )
     await db.delete(product)
     await db.commit()

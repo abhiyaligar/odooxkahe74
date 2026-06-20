@@ -35,6 +35,7 @@ from app.schemas.manufacturing import (
     WorkOrderResponse
 )
 from app.api.dependencies import get_current_user, RoleChecker
+from app.services.audit import log_action
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -61,7 +62,7 @@ async def get_mo_or_raise(mo_id: UUID, db: AsyncSession) -> ManufacturingOrder:
     return mo
 
 @router.post("/", response_model=MOResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(mfg_checker)])
-async def create_manufacturing_order(mo_in: MOCreate, db: AsyncSession = Depends(get_db)):
+async def create_manufacturing_order(mo_in: MOCreate, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     # 1. Verify parent product exists & is FinishedGood
     prod_res = await db.execute(select(Product).where(Product.id == mo_in.product_id))
     product = prod_res.scalars().first()
@@ -117,8 +118,19 @@ async def create_manufacturing_order(mo_in: MOCreate, db: AsyncSession = Depends
         db.add(wo)
 
     from app.services.procurement import check_mo_components_for_procurement
-    await check_mo_components_for_procurement(db_mo.id, db)
+    await check_mo_components_for_procurement(db_mo.id, db, user=current_user)
 
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="ManufacturingOrder",
+        record_id=db_mo.id,
+        action="Create",
+        field_changed="status",
+        old_val=None,
+        new_val="Draft"
+    )
     await db.commit()
 
     # Reload and return
@@ -139,7 +151,7 @@ async def get_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db
     return await get_mo_or_raise(mo_id, db)
 
 @router.put("/{mo_id}", response_model=MOResponse, dependencies=[Depends(mfg_checker)])
-async def update_manufacturing_order(mo_id: UUID, mo_update: MOUpdate, db: AsyncSession = Depends(get_db)):
+async def update_manufacturing_order(mo_id: UUID, mo_update: MOUpdate, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
         raise HTTPException(status_code=400, detail="Only Draft Manufacturing Orders can be modified")
@@ -154,22 +166,44 @@ async def update_manufacturing_order(mo_id: UUID, mo_update: MOUpdate, db: Async
             raise HTTPException(status_code=404, detail="Assignee User not found")
         db_mo.assignee_id = mo_update.assignee_id
 
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="ManufacturingOrder",
+        record_id=db_mo.id,
+        action="Update",
+        field_changed="details",
+        old_val="Draft",
+        new_val="Draft Updated"
+    )
     await db.commit()
     return await get_mo_or_raise(db_mo.id, db)
 
 @router.delete("/{mo_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(mfg_checker)])
-async def delete_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_manufacturing_order(mo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
         raise HTTPException(status_code=400, detail="Only Draft Manufacturing Orders can be deleted")
 
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="ManufacturingOrder",
+        record_id=db_mo.id,
+        action="Delete",
+        field_changed="status",
+        old_val="Draft",
+        new_val=None
+    )
     await db.delete(db_mo)
     await db.commit()
 
 # --- Work Order Overrides (Only Draft MO) ---
 
 @router.post("/{mo_id}/work-orders/", response_model=WorkOrderResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(mfg_checker)])
-async def create_work_order(mo_id: UUID, wo_in: WorkOrderCreate, db: AsyncSession = Depends(get_db)):
+async def create_work_order(mo_id: UUID, wo_in: WorkOrderCreate, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
         raise HTTPException(status_code=400, detail="Routing overrides are only allowed on Draft orders")
@@ -182,12 +216,24 @@ async def create_work_order(mo_id: UUID, wo_in: WorkOrderCreate, db: AsyncSessio
         status=WorkOrderStatus.Pending
     )
     db_mo.work_orders.append(db_wo)
+    await db.flush()
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="WorkOrder",
+        record_id=db_wo.id,
+        action="Create",
+        field_changed="operation_name",
+        old_val=None,
+        new_val=db_wo.operation_name
+    )
     await db.commit()
     await db.refresh(db_wo)
     return db_wo
 
 @router.put("/{mo_id}/work-orders/{wo_id}", response_model=WorkOrderResponse, dependencies=[Depends(mfg_checker)])
-async def update_work_order(mo_id: UUID, wo_id: UUID, wo_update: WorkOrderUpdate, db: AsyncSession = Depends(get_db)):
+async def update_work_order(mo_id: UUID, wo_id: UUID, wo_update: WorkOrderUpdate, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
         raise HTTPException(status_code=400, detail="Routing overrides are only allowed on Draft orders")
@@ -204,12 +250,23 @@ async def update_work_order(mo_id: UUID, wo_id: UUID, wo_update: WorkOrderUpdate
     if wo_update.work_center_id is not None:
         db_wo.work_center_id = wo_update.work_center_id
 
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="WorkOrder",
+        record_id=db_wo.id,
+        action="Update",
+        field_changed="details",
+        old_val="Pending",
+        new_val="Updated"
+    )
     await db.commit()
     await db.refresh(db_wo)
     return db_wo
 
 @router.delete("/{mo_id}/work-orders/{wo_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(mfg_checker)])
-async def delete_work_order(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_work_order(mo_id: UUID, wo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
         raise HTTPException(status_code=400, detail="Routing overrides are only allowed on Draft orders")
@@ -220,13 +277,24 @@ async def delete_work_order(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends
         raise HTTPException(status_code=404, detail="Work Order not found on this Manufacturing Order")
 
     db_mo.work_orders.remove(db_wo)
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="WorkOrder",
+        record_id=db_wo.id,
+        action="Delete",
+        field_changed="status",
+        old_val=db_wo.status.value if hasattr(db_wo.status, "value") else str(db_wo.status),
+        new_val=None
+    )
     await db.commit()
 
 
 # --- State Transitions ---
 
 @router.post("/{mo_id}/confirm", dependencies=[Depends(mfg_checker)])
-async def confirm_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def confirm_manufacturing_order(mo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Draft:
         raise HTTPException(status_code=400, detail="Only Draft orders can be confirmed")
@@ -266,23 +334,45 @@ async def confirm_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(ge
             )
 
     db_mo.status = ManufacturingOrderStatus.Confirmed
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="ManufacturingOrder",
+        record_id=db_mo.id,
+        action="Confirm",
+        field_changed="status",
+        old_val="Draft",
+        new_val="Confirmed"
+    )
     await db.commit()
     return {"message": "Order confirmed and materials reserved successfully."}
 
 
 @router.post("/{mo_id}/start", dependencies=[Depends(mfg_checker)])
-async def start_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def start_manufacturing_order(mo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.Confirmed:
         raise HTTPException(status_code=400, detail="Only Confirmed orders can be started")
 
     db_mo.status = ManufacturingOrderStatus.InProgress
     db_mo.started_at = datetime.utcnow()
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="ManufacturingOrder",
+        record_id=db_mo.id,
+        action="Start",
+        field_changed="status",
+        old_val="Confirmed",
+        new_val="InProgress"
+    )
     await db.commit()
     return {"message": "Manufacturing started."}
 
 @router.post("/{mo_id}/work-orders/{wo_id}/start", dependencies=[Depends(mfg_checker)])
-async def start_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def start_work_order_endpoint(mo_id: UUID, wo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.InProgress:
         raise HTTPException(status_code=400, detail="Operations can only be started if the Manufacturing Order is InProgress")
@@ -311,11 +401,22 @@ async def start_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSession =
 
     db_wo.status = WorkOrderStatus.InProgress
     db_wo.started_at = datetime.utcnow()
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="WorkOrder",
+        record_id=db_wo.id,
+        action="Start",
+        field_changed="status",
+        old_val="Pending",
+        new_val="InProgress"
+    )
     await db.commit()
     return {"message": "Work Center operation started."}
 
 @router.post("/{mo_id}/work-orders/{wo_id}/complete", dependencies=[Depends(mfg_checker)])
-async def complete_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def complete_work_order_endpoint(mo_id: UUID, wo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.InProgress:
         raise HTTPException(status_code=400, detail="Operations can only be modified if the Manufacturing Order is InProgress")
@@ -329,11 +430,22 @@ async def complete_work_order_endpoint(mo_id: UUID, wo_id: UUID, db: AsyncSessio
 
     db_wo.status = WorkOrderStatus.Done
     db_wo.completed_at = datetime.utcnow()
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="WorkOrder",
+        record_id=db_wo.id,
+        action="Complete",
+        field_changed="status",
+        old_val="InProgress",
+        new_val="Done"
+    )
     await db.commit()
     return {"message": "Work Center operation completed."}
 
 @router.post("/{mo_id}/complete", dependencies=[Depends(mfg_checker)])
-async def complete_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def complete_manufacturing_order(mo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status != ManufacturingOrderStatus.InProgress:
         raise HTTPException(status_code=400, detail="Only InProgress orders can be completed")
@@ -393,11 +505,22 @@ async def complete_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(g
 
     db_mo.status = ManufacturingOrderStatus.Completed
     db_mo.completed_at = datetime.utcnow()
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="ManufacturingOrder",
+        record_id=db_mo.id,
+        action="Complete",
+        field_changed="status",
+        old_val="InProgress",
+        new_val="Completed"
+    )
     await db.commit()
     return {"message": "Manufacturing Order completed. Stock quantities and ledgers updated."}
 
 @router.post("/{mo_id}/cancel", dependencies=[Depends(mfg_checker)])
-async def cancel_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get_db)):
+async def cancel_manufacturing_order(mo_id: UUID, current_user: User = Depends(mfg_checker), db: AsyncSession = Depends(get_db)):
     db_mo = await get_mo_or_raise(mo_id, db)
     if db_mo.status in [ManufacturingOrderStatus.Completed, ManufacturingOrderStatus.Cancelled]:
         raise HTTPException(status_code=400, detail="Completed or Cancelled orders cannot be cancelled")
@@ -417,6 +540,18 @@ async def cancel_manufacturing_order(mo_id: UUID, db: AsyncSession = Depends(get
             )
             await db.execute(stmt)
 
+    old_status = db_mo.status.value if hasattr(db_mo.status, 'value') else str(db_mo.status)
     db_mo.status = ManufacturingOrderStatus.Cancelled
+    await log_action(
+        db=db,
+        user=current_user,
+        module="Manufacturing",
+        record_type="ManufacturingOrder",
+        record_id=db_mo.id,
+        action="Cancel",
+        field_changed="status",
+        old_val=old_status,
+        new_val="Cancelled"
+    )
     await db.commit()
     return {"message": "Manufacturing Order cancelled."}
