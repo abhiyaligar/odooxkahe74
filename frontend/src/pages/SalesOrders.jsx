@@ -434,7 +434,7 @@ export default function SalesOrders() {
                         disabled={createSalesOrderMutation.isPending}
                       >
                         <option value="">Select Product...</option>
-                        {products.filter(p => p.type === "FinishedGood").map(p => (
+                        {products.map(p => (
                           <option key={p.id} value={p.id}>{p.name} (${p.sales_price})</option>
                         ))}
                       </select>
