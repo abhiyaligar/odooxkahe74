@@ -12,6 +12,14 @@ def get_gcs_client() -> storage.Client:
             return storage.Client.from_service_account_info(info)
         except Exception:
             pass
+
+    credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    if credentials_path and os.path.exists(credentials_path):
+        try:
+            return storage.Client.from_service_account_json(credentials_path)
+        except Exception:
+            pass
+
     return storage.Client()
 
 async def upload_avatar_to_gcs(file: UploadFile) -> str:

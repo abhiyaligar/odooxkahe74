@@ -3,6 +3,7 @@ import { useErpStore } from '../store/erpStore';
 import { ThemeToggle } from '../components/common/ThemeToggle';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
+import Profile from './Profile';
 import {
   ShoppingBag,
   ShoppingCart,
@@ -319,43 +320,21 @@ export default function CustomerPortal() {
             )}
           </button>
 
-          {/* User Avatar / Logout */}
-          <div className="flex items-center space-x-2 border-l border-border pl-4 ml-2">
-            {currentUser?.avatar_url ? (
-              <img
-                src={currentUser.avatar_url}
-                alt="Avatar"
-                className="h-8 w-8 rounded-full border border-border object-cover"
-                title={currentUser.name}
-              />
-            ) : (
-              <div
-                className="h-8 w-8 rounded-full border border-border bg-elevated flex items-center justify-center text-xs font-semibold text-textPrimary"
-                title={currentUser?.name || "Customer Profile"}
-              >
-                <User size={16} />
-              </div>
-            )}
-            <button
-              onClick={() => {
-                if (window.confirm("Sign out of Shiv Furniture Works Customer Portal?")) {
-                  logout();
-                }
-              }}
-              title="Sign Out"
-              className="text-[10px] uppercase tracking-wider font-bold text-textSecondary hover:text-danger transition-colors duration-150 pl-1"
-            >
-              Sign Out
-            </button>
-          </div>
-
           {/* User Avatar & Dropdown */}
-          <div className="relative">
+          <div className="relative border-l border-border pl-4 ml-2">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary transition-colors duration-150"
+              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center overflow-hidden text-xs font-semibold text-textPrimary transition-colors duration-150"
             >
-              <User size={16} />
+              {currentUser?.avatar_url ? (
+                <img 
+                  src={currentUser.avatar_url} 
+                  alt="Avatar" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={16} />
+              )}
             </button>
 
             {showUserMenu && (
@@ -379,7 +358,7 @@ export default function CustomerPortal() {
                     <button
                       onClick={() => {
                         setShowUserMenu(false);
-                        if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
+                        if (window.confirm("Sign out of Shiv Furniture Works Customer Portal?")) {
                           logout();
                         }
                       }}
@@ -859,107 +838,7 @@ export default function CustomerPortal() {
 
         {/* VIEW 6: PROFILE */}
         {currentTab === "profile" && (
-          <div className="space-y-6 max-w-2xl mx-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold tracking-tight">My Profile</h2>
-              {!isEditingProfile ? (
-                <button
-                  onClick={() => {
-                    setEditProfileName(currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || "Customer User");
-                    setIsEditingProfile(true);
-                  }}
-                  className="bg-elevated border border-border hover:bg-card text-textPrimary px-3 py-1.5 rounded-custom text-xs font-semibold transition-colors"
-                >
-                  Edit Profile
-                </button>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setIsEditingProfile(false)}
-                    className="text-textSecondary hover:text-textPrimary text-xs font-semibold transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await api.put('/auth/me', { name: editProfileName });
-                        queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editProfileName }));
-                      } catch (e) {
-                        queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editProfileName }));
-                      }
-                      setIsEditingProfile(false);
-                    }}
-                    className="bg-accent text-background px-3 py-1.5 rounded-custom text-xs font-semibold hover:bg-accent/90 transition-colors"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-card border border-border rounded-[12px] p-6 space-y-6 shadow-sm">
-              <div className="flex items-center space-x-4 border-b border-border pb-6">
-                <div className="h-16 w-16 rounded-full bg-elevated border-2 border-border flex items-center justify-center">
-                  <span className="text-xl font-bold font-mono tracking-tighter text-textPrimary">
-                    {(currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || "CUS").substring(0, 2).toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  {isEditingProfile ? (
-                    <input
-                      type="text"
-                      value={editProfileName}
-                      onChange={(e) => setEditProfileName(e.target.value)}
-                      className="text-lg font-bold text-textPrimary bg-background border border-border rounded px-2 py-1 focus:outline-none focus:border-accent w-full max-w-[250px]"
-                      autoFocus
-                    />
-                  ) : (
-                    <h3 className="text-lg font-bold text-textPrimary">{currentUser?.name || currentUser?.username || currentUser?.customer_profile?.name || "Customer User"}</h3>
-                  )}
-                  <p className="text-sm text-textSecondary flex items-center mt-1">
-                    <Mail size={14} className="mr-1.5" />
-                    {currentUser?.email || "No email provided"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
-                      <Shield size={12} className="mr-1" /> System Role
-                    </p>
-                    <p className="text-sm font-medium text-textPrimary">Customer Portal User</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
-                      <Calendar size={12} className="mr-1" /> Member Since
-                    </p>
-                    <p className="text-sm font-medium text-textPrimary">
-                      {currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'N/A'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
-                      <User size={12} className="mr-1" /> Customer Profile Name
-                    </p>
-                    <p className="text-sm font-medium text-textPrimary">{currentUser?.customer_profile?.name || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1 flex items-center">
-                      <MapPin size={12} className="mr-1" /> Registered Address
-                    </p>
-                    <p className="text-sm font-medium text-textPrimary">{currentUser?.customer_profile?.address || "N/A"}</p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
+          <Profile />
         )}
       </main>
     </div>

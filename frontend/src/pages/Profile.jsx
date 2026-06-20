@@ -2,13 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useErpStore } from '../store/erpStore';
 import { api } from '../api/client';
-import { User, Mail, Shield, Calendar, Loader2 } from 'lucide-react';
+import { User, Mail, Shield, Calendar, Loader2, Camera } from 'lucide-react';
 
 export default function Profile() {
   const { currentRole } = useErpStore();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
+  const [tempAvatarFile, setTempAvatarFile] = useState(null);
+  const [tempAvatarPreview, setTempAvatarPreview] = useState("");
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image must be less than 5MB");
+        return;
+      }
+      setTempAvatarFile(file);
+      if (tempAvatarPreview) {
+        URL.revokeObjectURL(tempAvatarPreview);
+      }
+      setTempAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const resetAvatarState = () => {
+    if (tempAvatarPreview) {
+      URL.revokeObjectURL(tempAvatarPreview);
+    }
+    setTempAvatarFile(null);
+    setTempAvatarPreview("");
+  };
 
   const { data: currentUser, isLoading, error } = useQuery({
     queryKey: ['currentUser'],
@@ -85,7 +110,10 @@ export default function Profile() {
         ) : (
           <div className="flex items-center space-x-3">
             <button 
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                setIsEditing(false);
+                resetAvatarState();
+              }}
               className="text-textSecondary hover:text-textPrimary text-sm font-semibold transition-colors"
             >
               Cancel
@@ -93,12 +121,23 @@ export default function Profile() {
             <button 
               onClick={async () => {
                 try {
-                  await api.put('/auth/me', { name: editName });
-                  queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editName }));
+                  const formData = new FormData();
+                  if (editName !== (currentUser?.name || currentUser?.customer_profile?.name)) {
+                    formData.append('name', editName);
+                  }
+                  if (tempAvatarFile) {
+                    formData.append('avatar', tempAvatarFile);
+                  }
+
+                  if (editName !== (currentUser?.name || currentUser?.customer_profile?.name) || tempAvatarFile) {
+                    const updatedUser = await api.put('/auth/me', formData);
+                    queryClient.setQueryData(['currentUser'], updatedUser);
+                  }
+                  setIsEditing(false);
+                  resetAvatarState();
                 } catch (e) {
-                  queryClient.setQueryData(['currentUser'], old => ({ ...old, name: editName }));
+                  alert(e.message || "Failed to update profile. Please try again.");
                 }
-                setIsEditing(false);
               }}
               className="bg-accent text-background px-4 py-2 rounded-custom text-sm font-semibold hover:bg-accent/90 transition-colors"
             >
@@ -113,10 +152,49 @@ export default function Profile() {
         {/* Banner */}
         <div className="h-32 w-full bg-gradient-to-r from-accent/20 via-accent/10 to-background border-b border-border relative">
           {/* Avatar floating */}
-          <div className="absolute -bottom-10 left-8 h-24 w-24 rounded-full border-4 border-card bg-elevated flex items-center justify-center shadow-lg">
-            <span className="text-3xl font-bold font-mono tracking-tighter text-textPrimary">
-              {getInitials(profileName)}
-            </span>
+          <div className="absolute -bottom-10 left-8 h-24 w-24 rounded-full border-4 border-card bg-elevated flex items-center justify-center shadow-lg overflow-hidden group">
+            {isEditing ? (
+              <label className="cursor-pointer w-full h-full flex items-center justify-center relative">
+                {tempAvatarPreview ? (
+                  <img 
+                    src={tempAvatarPreview} 
+                    alt="Avatar" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : currentUser?.avatar_url ? (
+                  <img 
+                    src={currentUser.avatar_url} 
+                    alt="Avatar" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold font-mono tracking-tighter text-textPrimary">
+                    {getInitials(editName || profileName)}
+                  </span>
+                )}
+                {/* Overlay with Camera icon when editing */}
+                <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center text-textPrimary transition-opacity duration-150">
+                  <Camera size={20} className="mb-0.5" />
+                  <span className="text-[7px] uppercase tracking-wider font-bold">Change</span>
+                </div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleAvatarChange} 
+                  className="hidden" 
+                />
+              </label>
+            ) : currentUser?.avatar_url ? (
+              <img 
+                src={currentUser.avatar_url} 
+                alt="Avatar" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-3xl font-bold font-mono tracking-tighter text-textPrimary">
+                {getInitials(profileName)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -185,6 +263,18 @@ export default function Profile() {
               <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1">Email Address</p>
               <p className="text-sm font-medium text-textPrimary">{profileEmail}</p>
             </div>
+            {currentUser?.customer_profile?.phone && (
+              <div>
+                <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1">Phone Number</p>
+                <p className="text-sm font-medium text-textPrimary">{currentUser.customer_profile.phone}</p>
+              </div>
+            )}
+            {currentUser?.customer_profile?.address && (
+              <div>
+                <p className="text-xs text-textSecondary uppercase tracking-wider font-semibold mb-1">Registered Address</p>
+                <p className="text-sm font-medium text-textPrimary">{currentUser.customer_profile.address}</p>
+              </div>
+            )}
           </div>
         </div>
 

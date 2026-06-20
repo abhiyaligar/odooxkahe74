@@ -194,3 +194,39 @@ async def create_user_by_admin(
         db_user.customer_profile = cust_res.scalars().first()
         
     return db_user
+
+@router.put("/me", response_model=UserResponse)
+async def update_me(
+    name: Optional[str] = Form(None),
+    avatar: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if name is not None:
+        current_user.name = name
+        if current_user.role == UserRole.Customer:
+            cust_res = await db.execute(select(Customer).where(Customer.id == current_user.id))
+            db_customer = cust_res.scalars().first()
+            if db_customer:
+                db_customer.name = name
+
+    if avatar is not None:
+        try:
+            avatar_url = await upload_avatar_to_gcs(avatar)
+            current_user.avatar_url = avatar_url
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to upload avatar to GCS: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload profile image: {str(e)}"
+            )
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    if current_user.role == UserRole.Customer:
+        cust_res = await db.execute(select(Customer).where(Customer.id == current_user.id))
+        current_user.customer_profile = cust_res.scalars().first()
+
+    return current_user

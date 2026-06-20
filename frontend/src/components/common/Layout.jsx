@@ -229,7 +229,24 @@ export const Layout = ({ children }) => {
               <span>{roleDisplayNames[currentRole]}</span>
             </div>
 
-            {/* User Avatar & Logout */}
+            {/* User Avatar linking to Profile */}
+            <button
+              onClick={() => navigate('/profile')}
+              title="My Profile"
+              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary transition-all duration-150 overflow-hidden"
+            >
+              {currentUser?.avatar_url ? (
+                <img 
+                  src={currentUser.avatar_url} 
+                  alt="Avatar" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={16} />
+              )}
+            </button>
+
+            {/* Sign Out Button */}
             <button
               onClick={() => {
                 if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
@@ -237,17 +254,9 @@ export const Layout = ({ children }) => {
                 }
               }}
               title="Sign Out"
-              className="h-8 w-8 rounded-full border border-border bg-elevated hover:bg-card flex items-center justify-center text-xs font-semibold text-textPrimary hover:text-danger transition-colors duration-150 overflow-hidden"
+              className="p-1.5 rounded-custom border border-border bg-elevated hover:bg-card flex items-center justify-center text-textSecondary hover:text-danger transition-colors duration-150"
             >
-              {currentUser?.avatar_url ? (
-                <img
-                  src={currentUser.avatar_url}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User size={16} />
-              )}
+              <LogOut size={16} />
             </button>
           </div>
         </header>

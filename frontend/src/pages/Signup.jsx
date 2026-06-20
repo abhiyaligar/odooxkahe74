@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Check, Loader2, ShoppingBag, Store, AlertCircle, Camera } from 'lucide-react';
+import { Eye, EyeOff, Check, Loader2, ShoppingBag, Store, AlertCircle } from 'lucide-react';
 import { api } from '../api/client';
 
 export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHome }) {
@@ -17,38 +17,6 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
   // Conditional fields state
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  
-  // Profile picture upload states
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState('');
-
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors(prev => ({ ...prev, avatar: 'Image must be less than 5MB' }));
-        return;
-      }
-      setAvatarFile(file);
-      if (avatarPreview) {
-        URL.revokeObjectURL(avatarPreview);
-      }
-      setAvatarPreview(URL.createObjectURL(file));
-      setErrors(prev => {
-        const copy = { ...prev };
-        delete copy.avatar;
-        return copy;
-      });
-    }
-  };
-
-  const clearAvatar = () => {
-    if (avatarPreview) {
-      URL.revokeObjectURL(avatarPreview);
-    }
-    setAvatarFile(null);
-    setAvatarPreview('');
-  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -90,18 +58,16 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
     setErrors({});
     
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', name);
-      formDataToSend.append('email', email);
-      formDataToSend.append('password', password);
-      formDataToSend.append('role', 'Customer');
-      formDataToSend.append('phone', phone);
-      formDataToSend.append('address', address);
-      if (avatarFile) {
-        formDataToSend.append('avatar', avatarFile);
-      }
+      const signupPayload = {
+        name,
+        email,
+        password,
+        role: 'Customer',
+        phone,
+        address,
+      };
 
-      await api.post('/auth/signup', formDataToSend);
+      await api.post('/auth/signup', signupPayload);
       
       const params = new URLSearchParams();
       params.append('username', email);
@@ -153,51 +119,6 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
               </div>
             )}
             
-            {/* Avatar Upload */}
-            <div className="flex flex-col items-center justify-center space-y-2 pb-2">
-              <div className="relative group">
-                <label className="cursor-pointer block">
-                  <div className="w-20 h-20 rounded-full border-2 border-dashed border-border hover:border-accent bg-card flex items-center justify-center overflow-hidden transition-all duration-150 relative">
-                    {avatarPreview ? (
-                      <img 
-                        src={avatarPreview} 
-                        alt="Avatar Preview" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-textSecondary group-hover:text-textPrimary transition-colors duration-150">
-                        <Camera size={20} className="mb-1" />
-                        <span className="text-[8px] uppercase tracking-wider font-bold">Add Photo</span>
-                      </div>
-                    )}
-                    {/* Hover Overlay */}
-                    {avatarPreview && (
-                      <div className="absolute inset-0 bg-background/70 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-150">
-                        <Camera size={16} className="text-textPrimary" />
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={isLoading}
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
-                </label>
-                {avatarPreview && (
-                  <button
-                    type="button"
-                    onClick={clearAvatar}
-                    className="absolute -top-1 -right-1 bg-danger hover:bg-danger/90 text-background rounded-full p-1 shadow-sm transition-all duration-150"
-                    title="Remove Photo"
-                  >
-                    <AlertCircle size={10} className="rotate-45" />
-                  </button>
-                )}
-              </div>
-              {errors.avatar && <span className="text-[9px] text-danger font-mono">{errors.avatar}</span>}
-            </div>
 
             {/* Shared Field: Full Name */}
             <div className="flex flex-col space-y-1">
