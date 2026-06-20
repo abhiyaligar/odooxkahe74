@@ -21,7 +21,6 @@ export default function Manufacturing() {
 
   const { 
     workCenters, 
-    bomOperations,
     currentRole
   } = useErpStore();
 
@@ -584,16 +583,16 @@ export default function Manufacturing() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {(selectedMo.work_orders || [])
+                      {(selectedMo.work_orders || [])
                           .sort((a, b) => a.sequence - b.sequence)
                           .map(wo => {
                             const wcName = workCenters.find(w => w.id === wo.work_center_id)?.name || 'Unknown';
                             
-                            const bomRecord = recipes.find(b => b.id === selectedMo.bom_id);
-                            const matchedOp = bomOperations.find(bo => bo.bom_id === bomRecord?.id && bo.operation_name === wo.operation_name);
-                            const duration = matchedOp 
-                              ? matchedOp.duration_minutes * selectedMo.quantity_to_produce 
-                              : 15 * selectedMo.quantity_to_produce;
+                             const bomRecord = recipes.find(b => b.id === selectedMo.bom_id);
+                             const matchedOp = bomRecord?.operations?.find(bo => bo.operation_name === wo.operation_name);
+                             const duration = matchedOp 
+                               ? matchedOp.duration_minutes * selectedMo.quantity_to_produce 
+                               : 15 * selectedMo.quantity_to_produce;
 
                             return (
                               <tr key={wo.id} className="hover:bg-elevated/10">
