@@ -17,6 +17,11 @@
     --font-primary: 'Geist', sans-serif;
     --font-secondary: 'Inter', sans-serif;
     --font-tertiary: 'DM Sans', sans-serif;
+    
+    /* Semantic Status Colors */
+    --color-success: #22C55E;
+    --color-warning: #EAB308;
+    --color-danger: #EF4444;
   }
 
   .dark {

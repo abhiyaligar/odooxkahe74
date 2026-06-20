@@ -260,7 +260,7 @@ export default function Recipes() {
             
             {/* Error Message banner */}
             {errorMessage && (
-              <div className="bg-statusRed/10 border border-statusRed/20 text-statusRed p-3 rounded-custom flex items-center space-x-2 text-xs">
+              <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-center space-x-2 text-xs">
                 <AlertCircle size={16} className="shrink-0" />
                 <span className="font-mono">{errorMessage}</span>
               </div>
@@ -360,7 +360,7 @@ export default function Recipes() {
                       type="button"
                       onClick={() => handleRemoveComponentRow(idx)}
                       disabled={formComponents.length === 1 || createBomMutation.isPending}
-                      className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
+                      className="text-textMuted hover:text-danger disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
                     </button>
@@ -433,7 +433,7 @@ export default function Recipes() {
                       type="button"
                       onClick={() => handleRemoveOperationRow(idx)}
                       disabled={formOperations.length === 1 || createBomMutation.isPending}
-                      className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
+                      className="text-textMuted hover:text-danger disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
                     </button>

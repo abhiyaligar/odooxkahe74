@@ -224,7 +224,7 @@ export default function PurchaseOrders() {
   const renderStepper = (status) => {
     if (status === "Cancelled") {
       return (
-        <div className="flex items-center justify-center p-3 bg-statusRed/10 border border-statusRed/20 text-statusRed rounded-custom text-xs font-semibold uppercase tracking-wider font-mono">
+        <div className="flex items-center justify-center p-3 bg-danger/10 border border-danger/20 text-danger rounded-custom text-xs font-semibold uppercase tracking-wider font-mono">
           Cancelled: Order Voided
         </div>
       );
@@ -347,10 +347,10 @@ export default function PurchaseOrders() {
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
                         po.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
-                        po.status === "Confirmed" ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' :
-                        po.status === "PartiallyReceived" ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' :
-                        po.status === "FullyReceived" ? 'border-statusGreen/40 text-statusGreen bg-statusGreen/5' :
-                        'border-statusRed/40 text-statusRed bg-statusRed/5'
+                        po.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
+                        po.status === "PartiallyReceived" ? 'border-warning/40 text-warning bg-warning/5' :
+                        po.status === "FullyReceived" ? 'border-success/40 text-success bg-success/5' :
+                        'border-danger/40 text-danger bg-danger/5'
                       }`}>
                         {po.status === "PartiallyReceived" ? "Part Received" : 
                          po.status === "FullyReceived" ? "Received" : po.status}
@@ -452,7 +452,7 @@ export default function PurchaseOrders() {
                       type="button"
                       onClick={() => handleRemoveLine(idx)}
                       disabled={orderLines.length === 1}
-                      className="text-textMuted hover:text-statusRed disabled:opacity-40 p-1.5 rounded"
+                      className="text-textMuted hover:text-danger disabled:opacity-40 p-1.5 rounded"
                     >
                       &times;
                     </button>
@@ -601,7 +601,7 @@ export default function PurchaseOrders() {
                             <div className="bg-card border border-border p-2 rounded text-[10px] font-mono text-textSecondary flex items-center space-x-2 justify-center">
                               <span>Stock Delta: {currentStock} on hand</span>
                               <ArrowRight size={10} />
-                              <span className="text-statusGreen font-bold">+{inputVal} received</span>
+                              <span className="text-success font-bold">+{inputVal} received</span>
                               <ArrowRight size={10} />
                               <span className="text-textPrimary font-bold">{targetStock} resulting</span>
                             </div>
@@ -610,7 +610,7 @@ export default function PurchaseOrders() {
                       );
                     })}
                     {(selectedOrder.lines || []).every(l => l.quantity_ordered === l.quantity_received) && (
-                      <p className="text-[11px] text-statusGreen italic text-center font-semibold">All products have been received from the vendor and logged into stock.</p>
+                      <p className="text-[11px] text-success italic text-center font-semibold">All products have been received from the vendor and logged into stock.</p>
                     )}
                   </div>
                 </div>
@@ -622,7 +622,7 @@ export default function PurchaseOrders() {
                   <button
                     type="button"
                     onClick={handleCancel}
-                    className="hover:text-statusRed text-xs text-textMuted py-2 transition-colors duration-150"
+                    className="hover:text-danger text-xs text-textMuted py-2 transition-colors duration-150"
                   >
                     Void Order
                   </button>

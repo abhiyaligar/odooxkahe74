@@ -82,9 +82,9 @@ export function getOrderStatusBreakdown({ salesOrders = [], purchaseOrders = [],
   // Color mapping using the project's semantic status palette
   const colorMap = {
     Draft: "var(--muted-foreground)",
-    "In Progress": "#EAB308",
-    Completed: "#22C55E",
-    Cancelled: "#EF4444",
+    "In Progress": "var(--color-warning)",
+    Completed: "var(--color-success)",
+    Cancelled: "var(--color-danger)",
   };
 
   // Build result array, omitting any bucket with count === 0

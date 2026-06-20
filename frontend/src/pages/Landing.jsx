@@ -226,7 +226,7 @@ export default function LandingPage({ onNavigateToLogin }) {
 
               <div className="flex items-center pt-1">
                 <span className={`inline-block text-[8px] font-bold uppercase rounded px-2 py-0.5 tracking-wider border font-mono ${
-                  p.badge === 'In Stock' ? 'border-statusGreen/40 text-statusGreen bg-statusGreen/5' : 'border-statusAmber/40 text-statusAmber bg-statusAmber/5'
+                  p.badge === 'In Stock' ? 'border-success/40 text-success bg-success/5' : 'border-warning/40 text-warning bg-warning/5'
                 }`}>
                   {p.badge}
                 </span>

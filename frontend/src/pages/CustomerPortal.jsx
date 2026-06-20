@@ -137,10 +137,10 @@ export default function CustomerPortal() {
 
   const customerStatusColors = {
     Draft: "border-border text-textSecondary bg-elevated/30",
-    Confirmed: "border-statusAmber/40 text-statusAmber bg-statusAmber/5",
-    PartiallyDelivered: "border-statusAmber/40 text-statusAmber bg-statusAmber/5",
-    FullyDelivered: "border-statusGreen/40 text-statusGreen bg-statusGreen/5",
-    Cancelled: "border-statusRed/40 text-statusRed bg-statusRed/5"
+    Confirmed: "border-warning/40 text-warning bg-warning/5",
+    PartiallyDelivered: "border-warning/40 text-warning bg-warning/5",
+    FullyDelivered: "border-success/40 text-success bg-success/5",
+    Cancelled: "border-danger/40 text-danger bg-danger/5"
   };
 
   // Cart operations
@@ -206,7 +206,7 @@ export default function CustomerPortal() {
   const renderTrackingStepper = (status) => {
     if (status === "Cancelled") {
       return (
-        <div className="p-3 border border-statusRed/20 bg-statusRed/5 text-statusRed text-xs font-semibold rounded-custom text-center uppercase tracking-wider font-mono">
+        <div className="p-3 border border-danger/20 bg-danger/5 text-danger text-xs font-semibold rounded-custom text-center uppercase tracking-wider font-mono">
           Cancelled: This order has been voided
         </div>
       );
@@ -304,7 +304,6 @@ export default function CustomerPortal() {
             )}
           </button>
 
-
         </div>
       </header>
 
@@ -381,17 +380,37 @@ export default function CustomerPortal() {
 
                       <div className="flex items-center justify-between pt-2">
                         <span className={`inline-block text-[9px] font-bold uppercase rounded px-2 py-0.5 tracking-wider border font-mono ${
-                          isMTO ? 'border-statusAmber/40 text-statusAmber bg-statusAmber/5' : 'border-statusGreen/40 text-statusGreen bg-statusGreen/5'
+                          isMTO ? 'border-warning/40 text-warning bg-warning/5' : 'border-success/40 text-success bg-success/5'
                         }`}>
                           {isMTO ? "Built to Order" : "In Stock"}
                         </span>
 
-                        <button
-                          onClick={() => addToCart(p, 1)}
-                          className="bg-accent hover:bg-accent/90 text-background text-xs font-bold px-3 py-1.5 rounded-custom transition-colors duration-150"
-                        >
-                          Add to Order
-                        </button>
+                        {cart.find(item => item.product.id === p.id) ? (
+                          <div className="flex items-center space-x-2 bg-background border border-border rounded-custom p-0.5">
+                            <button 
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); updateCartQty(p.id, -1); }}
+                              className="p-1 text-textSecondary hover:text-textPrimary"
+                            >
+                              <Minus size={10} />
+                            </button>
+                            <span className="w-8 text-center font-mono font-bold text-xs">{cart.find(item => item.product.id === p.id).quantity}</span>
+                            <button 
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); updateCartQty(p.id, 1); }}
+                              className="p-1 text-textSecondary hover:text-textPrimary"
+                            >
+                              <Plus size={10} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); addToCart(p, 1); }}
+                            className="bg-accent hover:bg-accent/90 text-background text-xs font-bold px-3 py-1.5 rounded-custom transition-colors duration-150"
+                          >
+                            Add to Order
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -429,13 +448,13 @@ export default function CustomerPortal() {
                     <span className="flex items-center text-xs space-x-1">
                       {selectedProduct.procurement_strategy === "MTS" ? (
                         <>
-                          <span className="h-1.5 w-1.5 rounded-full bg-statusGreen" />
-                          <span className="text-statusGreen font-medium">✓ Ready to ship</span>
+                          <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                          <span className="text-success font-medium">✓ Ready to ship</span>
                         </>
                       ) : (
                         <>
-                          <span className="h-1.5 w-1.5 rounded-full bg-statusAmber animate-pulse" />
-                          <span className="text-statusAmber font-medium">Built to order — estimated delivery in 5 days</span>
+                          <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse" />
+                          <span className="text-warning font-medium">Built to order — estimated delivery in 5 days</span>
                         </>
                       )}
                     </span>
@@ -450,15 +469,34 @@ export default function CustomerPortal() {
                 </div>
 
                 <div className="pt-4 flex items-center space-x-4">
-                  <button
-                    onClick={() => {
-                      addToCart(selectedProduct, 1);
-                      alert(`Added 1 x ${selectedProduct.name} to order.`);
-                    }}
-                    className="flex-1 bg-accent hover:bg-accent/90 text-background font-bold text-xs py-3 rounded-custom transition-all duration-150 text-center"
-                  >
-                    Add to Order
-                  </button>
+                  {cart.find(item => item.product.id === selectedProduct.id) ? (
+                    <div className="flex-1 flex items-center justify-center space-x-4 bg-background border border-border rounded-custom p-1.5 py-2">
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); updateCartQty(selectedProduct.id, -1); }}
+                        className="p-2 bg-elevated rounded-custom text-textSecondary hover:text-textPrimary hover:bg-card transition-colors"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span className="w-12 text-center font-mono font-bold text-sm">{cart.find(item => item.product.id === selectedProduct.id).quantity}</span>
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); updateCartQty(selectedProduct.id, 1); }}
+                        className="p-2 bg-elevated rounded-custom text-textSecondary hover:text-textPrimary hover:bg-card transition-colors"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        addToCart(selectedProduct, 1);
+                      }}
+                      className="flex-1 bg-accent hover:bg-accent/90 text-background font-bold text-xs py-3 rounded-custom transition-all duration-150 text-center"
+                    >
+                      Add to Order
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -520,7 +558,7 @@ export default function CustomerPortal() {
                         {/* Remove */}
                         <button 
                           onClick={() => removeFromCart(item.product.id)}
-                          className="text-textMuted hover:text-statusRed p-1 transition-colors"
+                          className="text-textMuted hover:text-danger p-1 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>

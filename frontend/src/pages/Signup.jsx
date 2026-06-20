@@ -176,8 +176,8 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
           <form onSubmit={handleSubmit} className="space-y-4 animate-all-custom transition-all duration-150">
             
             {errors.general && (
-              <div className="bg-statusRed/10 border border-statusRed/20 text-statusRed p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed mb-4">
-                <AlertCircle className="h-4 w-4 shrink-0 text-statusRed mt-0.5" />
+              <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed mb-4">
+                <AlertCircle className="h-4 w-4 shrink-0 text-danger mt-0.5" />
                 <span>{errors.general}</span>
               </div>
             )}
@@ -192,11 +192,11 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={`w-full bg-card border text-xs py-2 ${
-                  errors.name ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
+                  errors.name ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
                 }`}
                 required
               />
-              {errors.name && <span className="text-[9px] text-statusRed font-mono">{errors.name}</span>}
+              {errors.name && <span className="text-[9px] text-danger font-mono">{errors.name}</span>}
             </div>
 
             {/* Shared Field: Email */}
@@ -209,11 +209,11 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={`w-full bg-card border text-xs py-2 ${
-                  errors.email ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
+                  errors.email ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
                 }`}
                 required
               />
-              {errors.email && <span className="text-[9px] text-statusRed font-mono">{errors.email}</span>}
+              {errors.email && <span className="text-[9px] text-danger font-mono">{errors.email}</span>}
             </div>
 
             {/* Passwords row */}
@@ -229,7 +229,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={`w-full bg-card border text-xs py-2 pr-8 ${
-                      errors.password ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
+                      errors.password ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
                     }`}
                     required
                   />
@@ -243,7 +243,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                     {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                   </button>
                 </div>
-                {errors.password && <span className="text-[9px] text-statusRed font-mono">{errors.password}</span>}
+                {errors.password && <span className="text-[9px] text-danger font-mono">{errors.password}</span>}
               </div>
 
               {/* Confirm Password */}
@@ -257,7 +257,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className={`w-full bg-card border text-xs py-2 pr-8 ${
-                      errors.confirmPassword ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
+                      errors.confirmPassword ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
                     }`}
                     required
                   />
@@ -271,7 +271,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                     {showConfirmPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                   </button>
                 </div>
-                {errors.confirmPassword && <span className="text-[9px] text-statusRed font-mono">{errors.confirmPassword}</span>}
+                {errors.confirmPassword && <span className="text-[9px] text-danger font-mono">{errors.confirmPassword}</span>}
               </div>
             </div>
 
@@ -291,11 +291,11 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                       setPhone(val);
                     }}
                     className={`w-full bg-card border text-xs py-2 ${
-                      errors.phone ? 'border-statusRed focus:border-statusRed' : 'border-border focus:border-accent'
+                      errors.phone ? 'border-danger focus:border-danger' : 'border-border focus:border-accent'
                     }`}
                     required
                   />
-                  {errors.phone && <span className="text-[9px] text-statusRed font-mono">{errors.phone}</span>}
+                  {errors.phone && <span className="text-[9px] text-danger font-mono">{errors.phone}</span>}
                 </div>
 
                 {/* Delivery Address */}
@@ -308,11 +308,11 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className={`w-full bg-card border text-xs py-2 px-3 focus:outline-none rounded-custom resize-none focus:border-accent ${
-                      errors.address ? 'border-statusRed focus:border-statusRed' : 'border-border'
+                      errors.address ? 'border-danger focus:border-danger' : 'border-border'
                     }`}
                     required
                   />
-                  {errors.address && <span className="text-[9px] text-statusRed font-mono">{errors.address}</span>}
+                  {errors.address && <span className="text-[9px] text-danger font-mono">{errors.address}</span>}
                 </div>
               </div>
             )}

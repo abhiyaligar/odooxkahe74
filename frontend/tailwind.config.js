@@ -17,9 +17,9 @@ export default {
         textPrimary: "var(--foreground)",
         textSecondary: "var(--muted-foreground)",
         textMuted: "var(--disabled)",
-        statusGreen: "#22C55E",
-        statusAmber: "#EAB308",
-        statusRed: "#EF4444",
+        success: "var(--color-success)",
+        warning: "var(--color-warning)",
+        danger: "var(--color-danger)",
       },
       borderRadius: {
         custom: "6px",
