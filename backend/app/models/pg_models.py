@@ -68,12 +68,19 @@ class BoM(Base):
     version = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    lines = relationship("BoMLine", back_populates="bom", cascade="all, delete-orphan")
+    product = relationship("Product", foreign_keys=[product_id], primaryjoin="BoM.product_id == Product.id")
+
 class BoMLine(Base):
     __tablename__ = "bom_lines"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     bom_id = Column(UUID(as_uuid=True), ForeignKey("boms.id"), nullable=False)
     component_product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
     quantity_required = Column(Float, nullable=False)
+
+    bom = relationship("BoM", back_populates="lines")
+    component = relationship("Product", foreign_keys=[component_product_id], primaryjoin="BoMLine.component_product_id == Product.id")
+
 
 class WorkCenter(Base):
     __tablename__ = "work_centers"
