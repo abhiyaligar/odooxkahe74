@@ -73,17 +73,20 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
     setNotification('');
 
     try {
-      const signupPayload = {
-        name,
-        email,
-        password,
-        role: 'Customer',
-        phone,
-        address,
-      };
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('role', 'Customer');
+      if (phone) {
+        formData.append('phone', phone);
+      }
+      if (address) {
+        formData.append('address', address);
+      }
 
       // 1. Create account
-      await api.post('/auth/signup', signupPayload);
+      await api.post('/auth/signup', formData);
 
       // 2. Request verification code
       try {
