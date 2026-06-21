@@ -3,9 +3,9 @@ import { create } from 'zustand';
 const initialVendors = [];
 const initialCustomers = [];
 const initialWorkCenters = [
-  { id: "wc1", name: "Wood Shop" },
-  { id: "wc2", name: "Assembly Line" },
-  { id: "wc3", name: "Paint Floor" }
+  { id: "00000000-0000-0000-0000-000000000001", name: "Wood Shop" },
+  { id: "00000000-0000-0000-0000-000000000002", name: "Assembly Line" },
+  { id: "00000000-0000-0000-0000-000000000003", name: "Paint Floor" }
 ];
 const initialBoms = [];
 const initialBomLines = [];
