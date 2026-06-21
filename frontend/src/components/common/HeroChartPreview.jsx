@@ -22,11 +22,11 @@ export const HeroChartPreview = () => {
   }, []);
 
   const chartColors = {
-    border: "#2A2C2E",
-    disabled: "#5C5E60",
-    foreground: "#F2F2F2",
-    mutedForeground: "#9A9C9E",
-    elevated: "#1F2123",
+    border: "var(--border)",
+    disabled: "var(--disabled)",
+    foreground: "var(--foreground)",
+    mutedForeground: "var(--muted-foreground)",
+    elevated: "var(--surface-elevated)",
   };
 
   // Mock Data for Line Chart
