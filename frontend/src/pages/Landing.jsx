@@ -11,7 +11,7 @@ import {
   Search,
   ShoppingCart
 } from 'lucide-react';
-import { OrderTrackingStepper } from '../components/common/OrderTrackingStepper';
+import { HeroChartPreview } from '../components/common/HeroChartPreview';
 
 export default function LandingPage({ onNavigateToLogin }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -119,17 +119,10 @@ export default function LandingPage({ onNavigateToLogin }) {
           </div>
         </div>
 
-        {/* Right Hero Live Tracking Preview */}
-        <div className="aspect-[4/3] w-full bg-card border border-border rounded-[12px] flex flex-col justify-center p-8 space-y-8 relative overflow-hidden shadow-2xl">
-          <div className="space-y-2 text-center">
-            <span className="text-[10px] font-bold text-accent uppercase tracking-widest block font-mono">Live Tracking Preview</span>
-            <h3 className="text-lg md:text-xl font-bold text-textPrimary tracking-tight flex items-center justify-center">
-              Order #1042 <ArrowRight className="mx-2 text-textMuted" size={16} /> Preparing
-            </h3>
-          </div>
-          
+        {/* Right Hero Live Charts Preview */}
+        <div className="aspect-[4/3] w-full bg-card border border-border rounded-[12px] flex flex-col justify-center p-6 relative overflow-hidden shadow-2xl">
           <div className="w-full relative z-10 pointer-events-none">
-            <OrderTrackingStepper status="Confirmed" className="shadow-none border-dashed bg-elevated/30" />
+            <HeroChartPreview />
           </div>
           
           {/* Subtle gradient overlay to make it look embedded */}
