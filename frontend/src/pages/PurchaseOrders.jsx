@@ -13,7 +13,9 @@ import {
   PackageCheck,
   PackageOpen,
   TrendingUp,
-  Filter
+  Filter,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 
 export default function PurchaseOrders() {
@@ -42,6 +44,7 @@ export default function PurchaseOrders() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState("table"); // "table" or "grid"
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [vendorFilter, setVendorFilter] = useState("ALL");
   
@@ -299,14 +302,44 @@ export default function PurchaseOrders() {
     <div className="space-y-4">
       {/* Filters and Action Row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="w-full sm:w-80">
-          <input
-            type="text"
-            placeholder="Search purchases (Order # or Vendor)..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-card border border-border rounded-custom py-1.5 px-3 text-xs focus:outline-none"
-          />
+        <div className="flex items-center space-x-3 w-full sm:w-auto">
+          <div className="w-full sm:w-80">
+            <input
+              type="text"
+              placeholder="Search purchases (Order # or Vendor)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-card border border-border rounded-custom py-1.5 px-3 text-xs focus:outline-none"
+            />
+          </div>
+
+          {/* View Switcher */}
+          <div className="flex bg-elevated border border-border p-0.5 rounded-custom text-textSecondary shrink-0">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              title="List View"
+              className={`p-1.5 rounded-custom transition-all duration-150 ${
+                viewMode === 'table'
+                  ? 'bg-card text-textPrimary shadow-sm border border-border/40'
+                  : 'hover:text-textPrimary border border-transparent'
+              }`}
+            >
+              <List size={13} strokeWidth={2.5} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+              className={`p-1.5 rounded-custom transition-all duration-150 ${
+                viewMode === 'grid'
+                  ? 'bg-card text-textPrimary shadow-sm border border-border/40'
+                  : 'hover:text-textPrimary border border-transparent'
+              }`}
+            >
+              <LayoutGrid size={13} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
 
         {canModify && (
@@ -355,70 +388,140 @@ export default function PurchaseOrders() {
         </div>
       </div>
 
-      {/* Purchase List Table */}
-      <div className="w-full border border-border bg-card rounded-custom overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[700px]">
-          <thead>
-            <tr className="bg-elevated/40 border-b border-border text-[11px] font-semibold text-textSecondary uppercase tracking-wider">
-              <th className="py-3 px-4">Order#</th>
-              <th className="py-3 px-4">Vendor</th>
-              <th className="py-3 px-4">Date Created</th>
-              <th className="py-3 px-4 text-center">Source</th>
-              <th className="py-3 px-4 text-center">Status</th>
-              <th className="py-3 px-4 text-right">Items Count</th>
-              <th className="py-3 px-4 text-right">Cost Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border text-xs">
-            {filteredOrders.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
-                  No purchase orders found. Manual POs or auto-generated replenishment requests will list here.
-                </td>
+      {/* Purchase List Table / Grid Wrapper */}
+      {viewMode === "table" ? (
+        <div className="w-full border border-border bg-card rounded-custom overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="bg-elevated/40 border-b border-border text-[11px] font-semibold text-textSecondary uppercase tracking-wider">
+                <th className="py-3 px-4">Order#</th>
+                <th className="py-3 px-4">Vendor</th>
+                <th className="py-3 px-4">Date Created</th>
+                <th className="py-3 px-4 text-center">Source</th>
+                <th className="py-3 px-4 text-center">Status</th>
+                <th className="py-3 px-4 text-right">Items Count</th>
+                <th className="py-3 px-4 text-right">Cost Total</th>
               </tr>
-            ) : (
-              filteredOrders.map((po) => {
-                const vendor = vendors.find(v => v.id === po.vendor_id);
-                const itemsCount = getOrderItemCount(po);
-                const total = getOrderTotal(po);
-                
-                return (
-                  <tr 
-                    key={po.id}
-                    onClick={() => handleRowClick(po)}
-                    className="hover:bg-elevated/30 cursor-pointer transition-colors duration-150"
-                  >
-                    <td className="py-3 px-4 font-mono font-medium text-textPrimary">{po.order_number}</td>
-                    <td className="py-3 px-4 text-textSecondary">{vendor ? vendor.name : 'Unknown'}</td>
-                    <td className="py-3 px-4 text-textSecondary">{new Date(po.created_at).toLocaleDateString()}</td>
-                    <td className="py-3 px-4 text-center">
+            </thead>
+            <tbody className="divide-y divide-border text-xs">
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
+                    No purchase orders found. Manual POs or auto-generated replenishment requests will list here.
+                  </td>
+                </tr>
+              ) : (
+                filteredOrders.map((po) => {
+                  const vendor = vendors.find(v => v.id === po.vendor_id);
+                  const itemsCount = getOrderItemCount(po);
+                  const total = getOrderTotal(po);
+                  
+                  return (
+                    <tr 
+                      key={po.id}
+                      onClick={() => handleRowClick(po)}
+                      className="hover:bg-elevated/30 cursor-pointer transition-colors duration-150"
+                    >
+                      <td className="py-3 px-4 font-mono font-medium text-textPrimary">{po.order_number}</td>
+                      <td className="py-3 px-4 text-textSecondary">{vendor ? vendor.name : 'Unknown'}</td>
+                      <td className="py-3 px-4 text-textSecondary">{new Date(po.created_at).toLocaleDateString()}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-block text-[9px] font-semibold px-2 py-0.5 rounded border border-border font-mono ${
+                          po.source === "AutoGenerated" ? 'text-accent bg-elevated/50' : 'text-textSecondary'
+                        }`}>
+                          {po.source}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
+                          po.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
+                          po.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
+                          po.status === "PartiallyReceived" ? 'border-warning/40 text-warning bg-warning/5' :
+                          po.status === "FullyReceived" ? 'border-success/40 text-success bg-success/5' :
+                          'border-danger/40 text-danger bg-danger/5'
+                        }`}>
+                          {po.status === "PartiallyReceived" ? "Part Received" : 
+                           po.status === "FullyReceived" ? "Received" : po.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-textSecondary">{itemsCount}</td>
+                      <td className="py-3 px-4 text-right font-mono font-semibold">₹{total.toFixed(2)}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredOrders.length === 0 ? (
+            <div className="col-span-full py-8 text-center text-textMuted font-mono bg-card border border-border rounded-custom">
+              No purchase orders found. Manual POs or auto-generated replenishment requests will list here.
+            </div>
+          ) : (
+            filteredOrders.map((po) => {
+              const vendor = vendors.find(v => v.id === po.vendor_id);
+              const itemsCount = getOrderItemCount(po);
+              const total = getOrderTotal(po);
+
+              return (
+                <div
+                  key={po.id}
+                  onClick={() => handleRowClick(po)}
+                  className="bg-card border border-border rounded-custom p-4 flex flex-col space-y-4 hover:border-textSecondary hover:shadow-md cursor-pointer transition-all duration-150"
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="font-mono font-bold text-xs text-textPrimary">{po.order_number}</span>
+                    <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
+                      po.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
+                      po.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
+                      po.status === "PartiallyReceived" ? 'border-warning/40 text-warning bg-warning/5' :
+                      po.status === "FullyReceived" ? 'border-success/40 text-success bg-success/5' :
+                      'border-danger/40 text-danger bg-danger/5'
+                    }`}>
+                      {po.status === "PartiallyReceived" ? "Part Received" : 
+                       po.status === "FullyReceived" ? "Received" : po.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[10px] text-textMuted font-bold uppercase tracking-wider">Vendor Partner</div>
+                    <div className="text-xs font-semibold text-textPrimary">{vendor ? vendor.name : 'Unknown'}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 border-t border-border/40 pt-3">
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Created</span>
+                      <span className="text-xs font-medium text-textSecondary font-mono">{new Date(po.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Source Route</span>
                       <span className={`inline-block text-[9px] font-semibold px-2 py-0.5 rounded border border-border font-mono ${
-                        po.source === "AutoGenerated" ? 'text-accent bg-elevated/50' : 'text-textSecondary'
+                        po.source === "AutoGenerated" ? 'text-accent bg-elevated/50 border-accent/20' : 'text-textSecondary'
                       }`}>
                         {po.source}
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
-                        po.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
-                        po.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
-                        po.status === "PartiallyReceived" ? 'border-warning/40 text-warning bg-warning/5' :
-                        po.status === "FullyReceived" ? 'border-success/40 text-success bg-success/5' :
-                        'border-danger/40 text-danger bg-danger/5'
-                      }`}>
-                        {po.status === "PartiallyReceived" ? "Part Received" : 
-                         po.status === "FullyReceived" ? "Received" : po.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-textSecondary">{itemsCount}</td>
-                    <td className="py-3 px-4 text-right font-mono font-semibold">₹{total.toFixed(2)}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 border-t border-border pt-3 mt-auto">
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Items Count</span>
+                      <span className="text-xs font-bold text-textSecondary font-mono">{itemsCount}</span>
+                    </div>
+                    <div className="space-y-0.5 text-right">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Cost Total</span>
+                      <span className="text-sm font-extrabold text-textPrimary font-mono">₹{total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Slide-over detail drawer */}
       <SlideOver
