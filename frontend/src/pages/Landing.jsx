@@ -56,7 +56,7 @@ export default function LandingPage({ onNavigateToLogin }) {
           <img 
             src="/logo.png" 
             alt="AutoCraft" 
-            className="h-6 md:h-8 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen" 
+            className="h-6 md:h-8 w-auto object-contain dark:invert-0 invert" 
           />
         </div>
 
@@ -304,7 +304,7 @@ export default function LandingPage({ onNavigateToLogin }) {
               <img 
                 src="/logo.png" 
                 alt="AutoCraft" 
-                className="h-5 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen" 
+                className="h-5 w-auto object-contain dark:invert-0 invert" 
               />
             </div>
             <p className="text-[11px] text-textMuted leading-relaxed max-w-xs">

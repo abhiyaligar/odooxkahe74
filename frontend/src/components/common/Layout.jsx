@@ -173,7 +173,7 @@ export const Layout = ({ children }) => {
               <img 
                 src="/logo.png" 
                 alt="AutoCraft" 
-                className="h-5 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen mb-1" 
+                className="h-5 w-auto object-contain dark:invert-0 invert mb-1" 
               />
               <span className="text-[9px] text-textSecondary uppercase tracking-widest font-mono">ERP Works</span>
             </div>
@@ -182,7 +182,7 @@ export const Layout = ({ children }) => {
               <img 
                 src="/logo.png" 
                 alt="AC" 
-                className="h-4 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen" 
+                className="h-4 w-auto object-contain dark:invert-0 invert" 
               />
             </div>
           )}

@@ -106,7 +106,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
           <img 
             src="/logo.png" 
             alt="AutoCraft" 
-            className="h-8 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen mb-2" 
+            className="h-8 w-auto object-contain dark:invert-0 invert mb-2" 
           />
           <p className="text-[10px] uppercase tracking-widest text-textSecondary font-semibold">Create your account</p>
         </div>
