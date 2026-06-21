@@ -1,10 +1,11 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { useErpStore } from "../store/erpStore";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import {
   FileText, Download, RefreshCw, Plus, ExternalLink,
-  ShoppingBag, ShoppingCart, Search, Filter, Loader2, XCircle
+  ShoppingBag, ShoppingCart, Search, Filter, Loader2, XCircle,
+  List, LayoutGrid
 } from "lucide-react";
 
 const fmt = (n) =>
@@ -30,6 +31,7 @@ export default function Invoices() {
 
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
+  const [viewMode, setViewMode] = useState("table"); // "table" or "grid"
   const [showGenModal, setShowGenModal] = useState(false);
   const [genType, setGenType] = useState("sales");
   const [genOrderId, setGenOrderId] = useState("");
@@ -129,6 +131,34 @@ export default function Invoices() {
             className="bg-card border border-border rounded-custom pl-8 pr-3 py-2 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent w-64"
           />
         </div>
+
+        {/* View Switcher */}
+        <div className="flex bg-elevated border border-border p-0.5 rounded-custom text-textSecondary shrink-0">
+          <button
+            type="button"
+            onClick={() => setViewMode('table')}
+            title="List View"
+            className={`p-1.5 rounded-custom transition-all duration-150 ${
+              viewMode === 'table'
+                ? 'bg-card text-textPrimary shadow-sm border border-border/40'
+                : 'hover:text-textPrimary border border-transparent'
+            }`}
+          >
+            <List size={13} strokeWidth={2.5} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('grid')}
+            title="Grid View"
+            className={`p-1.5 rounded-custom transition-all duration-150 ${
+              viewMode === 'grid'
+                ? 'bg-card text-textPrimary shadow-sm border border-border/40'
+                : 'hover:text-textPrimary border border-transparent'
+            }`}
+          >
+            <LayoutGrid size={13} strokeWidth={2.5} />
+          </button>
+        </div>
         <div className="relative flex items-center">
           <Filter className="absolute left-3 text-textMuted" size={12} />
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
@@ -141,19 +171,19 @@ export default function Invoices() {
         <span className="text-xs text-textSecondary ml-auto">{filtered.length} invoices</span>
       </div>
 
-      {/* Table */}
-      <div className="bg-card border border-border rounded-custom overflow-x-auto">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="animate-spin text-accent" size={24} />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            <FileText size={36} className="text-textMuted mb-3" />
-            <p className="text-sm text-textSecondary font-medium">No invoices yet</p>
-            <p className="text-xs text-textMuted mt-1">Click "Generate Invoice" to create your first PDF invoice</p>
-          </div>
-        ) : (
+      {/* Table / Grid Wrapper */}
+      {isLoading ? (
+        <div className="bg-card border border-border rounded-custom flex items-center justify-center py-16">
+          <Loader2 className="animate-spin text-accent" size={24} />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-card border border-border rounded-custom flex flex-col items-center py-16 text-center">
+          <FileText size={36} className="text-textMuted mb-3" />
+          <p className="text-sm text-textSecondary font-medium">No invoices yet</p>
+          <p className="text-xs text-textMuted mt-1">Click "Generate Invoice" to create your first PDF invoice</p>
+        </div>
+      ) : viewMode === "table" ? (
+        <div className="bg-card border border-border rounded-custom overflow-x-auto">
           <table className="w-full text-left text-xs min-w-[780px]">
             <thead>
               <tr className="bg-elevated/40 border-b border-border text-[11px] font-semibold text-textSecondary uppercase tracking-wider">
@@ -203,8 +233,71 @@ export default function Invoices() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((inv) => (
+            <div
+              key={inv.id}
+              className="bg-card border border-border rounded-custom p-4 flex flex-col space-y-4 hover:border-textSecondary hover:shadow-md transition-all duration-150 relative group"
+            >
+              {/* Header inside card */}
+              <div className="flex items-start justify-between">
+                <span className="font-mono font-bold text-xs text-textPrimary">{inv.invoice_number}</span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusBadge[inv.status] ?? "bg-elevated text-textSecondary"}`}>
+                  {inv.status}
+                </span>
+              </div>
+
+              {/* Type & Ref */}
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${typeBadge[inv.type] ?? "bg-elevated text-textSecondary"}`}>
+                  {inv.type === "SalesInvoice" ? <ShoppingBag size={10} /> : <ShoppingCart size={10} />}
+                  {inv.type.replace("Invoice", "")}
+                </span>
+                <span className="text-[10px] font-mono text-textMuted bg-elevated/40 border border-border px-2 py-0.5 rounded-custom">
+                  Ref: {inv.reference_number}
+                </span>
+              </div>
+
+              {/* Party Information */}
+              <div className="space-y-1">
+                <div className="text-[10px] text-textMuted font-bold uppercase tracking-wider">
+                  {inv.type === "SalesInvoice" ? "Customer" : "Vendor Partner"}
+                </div>
+                <div className="text-xs font-semibold text-textPrimary">{inv.party_name}</div>
+                {inv.party_email && <div className="text-[10px] text-textMuted font-mono truncate">{inv.party_email}</div>}
+              </div>
+
+              {/* Date & Amount */}
+              <div className="grid grid-cols-2 gap-2 border-t border-border/40 pt-3">
+                <div className="space-y-0.5">
+                  <span className="text-[9px] text-textMuted uppercase tracking-wide block">Billing Date</span>
+                  <span className="text-xs font-medium text-textSecondary font-mono">{fmtDate(inv.created_at)}</span>
+                </div>
+                <div className="space-y-0.5 text-right">
+                  <span className="text-[9px] text-textMuted uppercase tracking-wide block">Amount Due</span>
+                  <span className="text-sm font-extrabold text-textPrimary font-mono">{fmt(inv.total_amount)}</span>
+                </div>
+              </div>
+
+              {/* PDF Download section inside grid card */}
+              <div className="border-t border-border pt-3 mt-auto flex items-center justify-between">
+                <span className="text-[10px] text-textMuted">Invoice PDF</span>
+                {inv.gcs_url ? (
+                  <a href={inv.gcs_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white rounded-custom text-[11px] font-semibold hover:bg-accent/90 transition-colors shadow-sm">
+                    <Download size={12} /> Download
+                  </a>
+                ) : (
+                  <span className="text-textMuted text-[11px] italic">Not generated</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Generate Modal ── */}
       {showGenModal && (
