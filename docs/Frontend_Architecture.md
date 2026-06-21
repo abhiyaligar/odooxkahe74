@@ -44,7 +44,8 @@ frontend/
     ├── store/
     │   └── erpStore.js           # Zustand store with mock data seed and automation rules
     └── utils/
-        └── orderStatusBreakdown.js  # Pure aggregation function for the Order Status Breakdown donut chart
+        ├── orderStatusBreakdown.js  # Pure aggregation function for the Order Status Breakdown donut chart
+        └── password.js              # Pure password validation utility evaluating complexity rules
 ```
 
 ## 3. Core Business Logic & UI Features
@@ -66,6 +67,32 @@ When a **Sales Order** is confirmed:
 - Guest routes (`/login`, `/signup`) are guarded to redirect already authenticated users to their home base.
 - Customer routes (`/portal`) are restricted to users with the `Customer` role.
 - Internal ERP routes (`/dashboard`, `/products`, `/sales`, `/purchase`, `/bom`, `/manufacturing`) are restricted to staff roles and wrapped in the ERP sidebar layout.
+
+### D. Password Complexity & Validation Requirements
+- **Utility Function**: A pure password strength validation utility is located at [password.js](file:///c:/Users/Asus/Downloads/odooxkahe74/frontend/src/utils/password.js). It evaluates a password string against five complexity rules using regular expressions:
+  - Minimum 8 characters (`password.length >= 8`)
+  - At least 1 uppercase letter (`/[A-Z]/`)
+  - At least 1 lowercase letter (`/[a-z]/`)
+  - At least 1 number (`/[0-9]/`)
+  - At least 1 special character (`/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/;']/`)
+- **Return Shape**:
+  ```javascript
+  {
+    length: boolean,
+    uppercase: boolean,
+    lowercase: boolean,
+    number: boolean,
+    special: boolean,
+    score: number // Range 0 - 5 representing number of satisfied rules
+  }
+  ```
+- **Signup Page Validation**:
+  - Displays a real-time checklist updating on every keystroke. Met requirements turn green with checkmarks (`text-success` icon and `--foreground` text contrast).
+  - Shows a segmented 5-bar strength meter dynamically colored based on score (0-1: Weak/Red, 2-3: Fair/Yellow, 4: Good/Yellow, 5: Strong/Green).
+  - Disables the submit button until the score is 5, password confirmation matches, and terms are checked.
+  - Prevents bypass submission (e.g., via Enter key) by displaying a red inline error message (`Password does not meet all requirements`) and focusing the password input.
+- **Login Page Validation**:
+  - The Login Page only checks that the password field is not empty, leaving credential validation to the backend service.
 
 ## 4. Component Reusability
 
