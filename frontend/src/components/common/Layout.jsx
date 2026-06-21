@@ -247,17 +247,13 @@ export const Layout = ({ children }) => {
           {/* Header Action Items */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             
-            {/* Global Search - Hidden on small mobile screens */}
-            <div className="relative w-36 sm:w-64 hidden md:block">
-              <Search className="absolute left-3 top-2.5 text-textMuted" size={14} />
-              <input
-                type="text"
-                placeholder="Global search..."
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent"
-              />
-            </div>
+            {/* Global Search - Icon */}
+            <button
+              className="p-1.5 rounded-custom border border-transparent hover:bg-elevated/50 text-textSecondary hover:text-textPrimary transition-colors duration-150 flex items-center justify-center shrink-0"
+              title="Global Search"
+            >
+              <Search size={18} />
+            </button>
 
             {/* Theme Toggle Button */}
             <ThemeToggle />
