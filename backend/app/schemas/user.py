@@ -20,6 +20,7 @@ class UserResponse(UserBase):
     is_active: bool
     created_at: datetime
     customer_profile: Optional[CustomerResponse] = None
+    avatar_url: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -29,3 +30,15 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: str | None = None
+
+class UserPagedResponse(BaseModel):
+    total_count: int
+    users: list[UserResponse]
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    email: Optional[EmailStr] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None

@@ -27,6 +27,11 @@ import Recipes from './pages/Recipes';
 import Manufacturing from './pages/Manufacturing';
 import Vendors from './pages/Vendors';
 import AuditLogs from './pages/AuditLogs';
+import Users from './pages/Users';
+import Profile from './pages/Profile';
+import Customers from './pages/Customers';
+import WalletPage from './pages/Wallet';
+import Invoices from './pages/Invoices';
 
 // Role-based root redirector
 const RootRedirect = () => {
@@ -133,11 +138,24 @@ function AppContent() {
                   <Vendors />
                 </RequireAuth>
               } />
+              <Route path="customers" element={
+                <RequireAuth allowedRoles={["SuperAdmin", "StoreAdmin"]}>
+                  <Customers />
+                </RequireAuth>
+              } />
+              <Route path="users" element={
+                <RequireAuth allowedRoles={["SuperAdmin", "StoreAdmin"]}>
+                  <Users />
+                </RequireAuth>
+              } />
               <Route path="audit-logs" element={
-                <RequireAuth allowedRoles={["SuperAdmin"]}>
+                <RequireAuth allowedRoles={["SuperAdmin", "StoreAdmin"]}>
                   <AuditLogs />
                 </RequireAuth>
               } />
+              <Route path="wallet" element={<WalletPage />} />
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="*" element={<RootRedirect />} />
             </Routes>
           </Layout>

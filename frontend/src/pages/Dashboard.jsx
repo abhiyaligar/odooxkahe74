@@ -56,6 +56,11 @@ export default function Dashboard() {
     queryFn: () => api.get('/manufacturing-orders/')
   });
 
+  const { data: stockMovementData = [] } = useQuery({
+    queryKey: ['stockMovementTrend'],
+    queryFn: () => api.get('/products/stock-movement-trend')
+  });
+
   const [chartColors, setChartColors] = React.useState({
     border: "#2A2C2E",
     disabled: "#5C5E60",
@@ -103,18 +108,6 @@ export default function Dashboard() {
 
   // 2. Charts Data Preparation
   
-  // Stock Movement Chart: last 7 days of ledger activity or trend representation
-  // Let's create a realistic mock movement based on actual dates or dates around current local time (June 20, 2026)
-  const stockMovementData = [
-    { day: "Jun 14", onHand: 110, reserved: 20 },
-    { day: "Jun 15", onHand: 115, reserved: 25 },
-    { day: "Jun 16", onHand: 108, reserved: 28 },
-    { day: "Jun 17", onHand: 122, reserved: 30 },
-    { day: "Jun 18", onHand: 128, reserved: 38 },
-    { day: "Jun 19", onHand: 135, reserved: 35 },
-    { day: "Jun 20", onHand: 242, reserved: 18 } // reflecting initial product states
-  ];
-
   // Order status breakdown (donut chart data)
   const donutData = getOrderStatusBreakdown({ salesOrders, purchaseOrders, manufacturingOrders });
   const totalOrders = donutData.reduce((sum, d) => sum + d.value, 0);

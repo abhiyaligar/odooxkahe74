@@ -14,7 +14,7 @@ async def test_signup_success(client: AsyncClient, db_session: AsyncSession):
         "password": "securepassword123",
         "role": "SalesUser"
     }
-    response = await client.post("/api/v1/auth/signup", json=signup_data)
+    response = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response.status_code == 201
     res_json = response.json()
     assert res_json["name"] == signup_data["name"]
@@ -40,11 +40,11 @@ async def test_signup_duplicate_email(client: AsyncClient):
     }
     
     # First signup
-    response = await client.post("/api/v1/auth/signup", json=signup_data)
+    response = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response.status_code == 201
     
     # Second signup with same email
-    response2 = await client.post("/api/v1/auth/signup", json=signup_data)
+    response2 = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response2.status_code == 400
     assert response2.json()["detail"] == "Email already registered"
 
@@ -55,7 +55,7 @@ async def test_login_success(client: AsyncClient):
         "password": "mysecretpassword",
         "role": "BusinessOwner"
     }
-    await client.post("/api/v1/auth/signup", json=signup_data)
+    await client.post("/api/v1/auth/signup", data=signup_data)
 
     # Attempt login (FastAPI OAuth2PasswordRequestForm uses form-data)
     login_data = {
@@ -75,7 +75,7 @@ async def test_login_incorrect_password(client: AsyncClient):
         "password": "correctpassword",
         "role": "SalesUser"
     }
-    await client.post("/api/v1/auth/signup", json=signup_data)
+    await client.post("/api/v1/auth/signup", data=signup_data)
 
     # Attempt login with wrong password
     login_data = {
@@ -106,7 +106,7 @@ async def test_long_password_handling(client: AsyncClient):
         "role": "InventoryManager"
     }
     
-    response = await client.post("/api/v1/auth/signup", json=signup_data)
+    response = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response.status_code == 201
     
     # Test login with the long password
@@ -117,3 +117,204 @@ async def test_long_password_handling(client: AsyncClient):
     response = await client.post("/api/v1/auth/login", data=login_data)
     assert response.status_code == 200
     assert "access_token" in response.json()
+
+async def test_create_user_by_superadmin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_superadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Super",
+            email="super@example.com",
+            role=UserRole.SuperAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_superadmin
+
+    try:
+        user_data = {
+            "name": "Created Admin",
+            "email": "createdadmin@example.com",
+            "password": "password123",
+            "role": "StoreAdmin"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 201
+        res_json = response.json()
+        assert res_json["email"] == "createdadmin@example.com"
+        assert res_json["role"] == "StoreAdmin"
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_create_user_by_storeadmin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_storeadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Store",
+            email="store@example.com",
+            role=UserRole.StoreAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_storeadmin
+
+    try:
+        user_data = {
+            "name": "Created Customer",
+            "email": "createdcust@example.com",
+            "password": "password123",
+            "role": "Customer",
+            "phone": "12345678",
+            "address": "Some address"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 201
+        res_json = response.json()
+        assert res_json["email"] == "createdcust@example.com"
+        assert res_json["role"] == "Customer"
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_create_superadmin_by_storeadmin_forbidden(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_storeadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Store",
+            email="store2@example.com",
+            role=UserRole.StoreAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_storeadmin
+
+    try:
+        user_data = {
+            "name": "Created Super",
+            "email": "createdsuper@example.com",
+            "password": "password123",
+            "role": "SuperAdmin"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 403
+        assert "StoreAdmins are not permitted to create SuperAdmin profiles" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_create_user_by_salesuser_forbidden(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+
+    async def _get_mock_sales():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Sales",
+            email="sales@example.com",
+            role=UserRole.SalesUser,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_sales
+
+    try:
+        user_data = {
+            "name": "Any User",
+            "email": "anyuser@example.com",
+            "password": "password123",
+            "role": "SalesUser"
+        }
+        response = await client.post("/api/v1/auth/users", json=user_data)
+        assert response.status_code == 403
+        assert "Only administrator roles are permitted to create users" in response.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_update_user_by_admin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+    
+    # Create user to update
+    from app.core.security import get_password_hash
+    test_user = User(
+        id=uuid.uuid4(),
+        name="Target User",
+        email="target@example.com",
+        password_hash=get_password_hash("password123"),
+        role=UserRole.SalesUser,
+        is_active=True
+    )
+    db_session.add(test_user)
+    await db_session.commit()
+
+    async def _get_mock_superadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Super",
+            email="super@example.com",
+            role=UserRole.SuperAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_superadmin
+
+    try:
+        update_data = {
+            "name": "Updated Name",
+            "role": "UserAdmin",
+            "is_active": False
+        }
+        response = await client.put(f"/api/v1/auth/users/{test_user.id}", json=update_data)
+        assert response.status_code == 200
+        res_json = response.json()
+        assert res_json["name"] == "Updated Name"
+        assert res_json["role"] == "UserAdmin"
+        assert res_json["is_active"] is False
+    finally:
+        app.dependency_overrides.clear()
+
+async def test_delete_user_by_admin_success(client: AsyncClient, db_session: AsyncSession):
+    import uuid
+    from app.main import app
+    from app.api.dependencies import get_current_user
+    
+    # Create user to delete
+    from app.core.security import get_password_hash
+    test_user = User(
+        id=uuid.uuid4(),
+        name="Target User 2",
+        email="target2@example.com",
+        password_hash=get_password_hash("password123"),
+        role=UserRole.SalesUser,
+        is_active=True
+    )
+    db_session.add(test_user)
+    await db_session.commit()
+
+    async def _get_mock_superadmin():
+        return User(
+            id=uuid.uuid4(),
+            name="Mock Super",
+            email="super@example.com",
+            role=UserRole.SuperAdmin,
+            is_active=True
+        )
+
+    app.dependency_overrides[get_current_user] = _get_mock_superadmin
+
+    try:
+        response = await client.delete(f"/api/v1/auth/users/{test_user.id}")
+        assert response.status_code == 204
+    finally:
+        app.dependency_overrides.clear()

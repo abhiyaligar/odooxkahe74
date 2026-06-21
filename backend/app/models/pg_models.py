@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship
 class UserRole(str, enum.Enum):
     SuperAdmin = "SuperAdmin"
     StoreAdmin = "StoreAdmin"
+    UserAdmin = "UserAdmin"
     SalesUser = "SalesUser"
     PurchaseUser = "PurchaseUser"
     ManufacturingUser = "ManufacturingUser"
@@ -26,6 +27,7 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.SalesUser, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    avatar_url = Column(String, nullable=True)
 
 class ProductType(str, enum.Enum):
     FinishedGood = "FinishedGood"
@@ -59,6 +61,8 @@ class Vendor(Base):
     category = Column(Enum(VendorCategory), default=VendorCategory.RawMaterials, nullable=False)
     outstanding_payable = Column(Float, default=0.0, nullable=False)
     payment_terms = Column(Enum(PaymentTerms), default=PaymentTerms.PrePaid, nullable=False)
+    products_supplied = Column(String, nullable=True)
+    rating = Column(Integer, default=5, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class BoM(Base):
@@ -321,3 +325,51 @@ class WalletTransaction(Base):
     reference_id = Column(UUID(as_uuid=True), nullable=True)  # References PO, MO etc.
     created_at = Column(DateTime, default=datetime.utcnow)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    performed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    user_name = Column(String, nullable=False)
+    module = Column(String, nullable=False, index=True)
+    record_type = Column(String, nullable=False)
+    record_id = Column(String, nullable=False)
+    action = Column(String, nullable=False, index=True)
+    field_changed = Column(String, nullable=True)
+    old_value = Column(String, nullable=True)
+    new_value = Column(String, nullable=True)
+
+    user = relationship("User")
+
+
+class InvoiceType(str, enum.Enum):
+    SalesInvoice = "SalesInvoice"
+    PurchaseInvoice = "PurchaseInvoice"
+
+class InvoiceStatus(str, enum.Enum):
+    Draft = "Draft"
+    Issued = "Issued"
+    Paid = "Paid"
+    Cancelled = "Cancelled"
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    invoice_number = Column(String, unique=True, index=True, nullable=False)
+    type = Column(Enum(InvoiceType), nullable=False)
+    status = Column(Enum(InvoiceStatus), default=InvoiceStatus.Issued, nullable=False)
+    reference_id = Column(String, nullable=False)          # SO or PO id
+    reference_number = Column(String, nullable=False)      # SO-XXXX or PO-XXXX
+    party_name = Column(String, nullable=False)            # Customer or Vendor name
+    party_email = Column(String, nullable=True)
+    total_amount = Column(Float, nullable=False)
+    currency = Column(String, default="INR", nullable=False)
+    gcs_url = Column(String, nullable=True)                # GCS public URL
+    gcs_blob = Column(String, nullable=True)               # blob path for signed URLs
+    notes = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+    creator = relationship("User", foreign_keys=[created_by])

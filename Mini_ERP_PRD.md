@@ -44,7 +44,7 @@ If a proposed feature does not ultimately move, protect, or report on this numbe
 
 | Role | Description |
 |---|---|
-| Super Admin | Top-level system owner. Full access, including managing Store Admins. |
+| Super Admin | Top-level system owner. Full access, including managing Store Admins, Inventory Managers, Sales Users, and Business Owners. |
 | Store Admin | Runs a store/business fully. Maps to "Admin" in the original brief. Full access to all modules including Audit Logs. |
 | Sales User | Creates and manages Sales Orders only. |
 | Purchase User | Creates and manages Purchase Orders and Vendors only. |

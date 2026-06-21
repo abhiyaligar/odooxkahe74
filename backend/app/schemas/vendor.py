@@ -10,6 +10,8 @@ class VendorBase(BaseModel):
     phone: Optional[str] = None 
     category: VendorCategory = VendorCategory.RawMaterials
     payment_terms: PaymentTerms = PaymentTerms.PrePaid
+    products_supplied: Optional[str] = None
+    rating: Optional[int] = 5
 
 class VendorCreate(VendorBase):
     pass
@@ -21,6 +23,8 @@ class VendorUpdate(BaseModel):
     category: Optional[VendorCategory] = None
     payment_terms: Optional[PaymentTerms] = None
     outstanding_payable: Optional[float] = None
+    products_supplied: Optional[str] = None
+    rating: Optional[int] = None
 
 class VendorResponse(VendorBase):
     id: UUID

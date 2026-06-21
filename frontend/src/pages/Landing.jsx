@@ -11,6 +11,7 @@ import {
   Search,
   ShoppingCart
 } from 'lucide-react';
+import { HeroChartPreview } from '../components/common/HeroChartPreview';
 
 export default function LandingPage({ onNavigateToLogin }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -48,51 +49,45 @@ export default function LandingPage({ onNavigateToLogin }) {
     <div className="min-h-screen w-screen bg-background text-textPrimary flex flex-col font-sans select-none overflow-x-hidden antialiased">
       
       {/* Sticky Navbar */}
-      <header 
-        className={`fixed top-0 left-0 w-full h-16 z-50 flex items-center justify-between px-6 md:px-12 transition-all duration-150 ${
-          isScrolled 
-            ? 'bg-card border-b border-border shadow-lg' 
-            : 'bg-transparent border-b border-transparent'
-        }`}
-      >
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 md:px-8 py-4 bg-[#0a0a0a] border-b border-white/10">
+        
         {/* Brand Left */}
-        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="h-7 w-7 rounded bg-accent text-background flex items-center justify-center font-black text-xs tracking-tighter">
+        <div className="flex items-center gap-[10px] cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="h-8 w-8 rounded-md bg-white text-black flex items-center justify-center font-black text-xs tracking-tighter">
             SF
           </div>
-          <span className="font-bold text-sm tracking-wide text-textPrimary uppercase">Shiv Furniture</span>
+          <span className="font-bold text-sm tracking-wide text-white uppercase">Shiv Furniture</span>
         </div>
 
         {/* Center Links */}
-        <nav className="hidden md:flex items-center space-x-8 text-xs font-semibold uppercase tracking-wider text-textSecondary">
-          <button onClick={() => scrollToSection('catalog')} className="hover:text-textPrimary transition-colors">Catalog</button>
-          <button onClick={() => scrollToSection('benefits')} className="hover:text-textPrimary transition-colors">Benefits</button>
-          <button onClick={() => scrollToSection('how-it-works')} className="hover:text-textPrimary transition-colors">How It Works</button>
+        <nav className="hidden md:flex items-center justify-center space-x-8 text-xs font-semibold uppercase tracking-[0.02em] text-white/60">
+          <button onClick={() => scrollToSection('catalog')} className="hover:text-white transition-colors duration-200">Catalog</button>
+          <button onClick={() => scrollToSection('benefits')} className="hover:text-white transition-colors duration-200">Benefits</button>
+          <button onClick={() => scrollToSection('how-it-works')} className="hover:text-white transition-colors duration-200">How It Works</button>
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center space-x-3">
-          
-          {/* Theme Switcher Toggle */}
+        <div className="flex items-center justify-end space-x-5">
           <ThemeToggle />
-
-          <button 
-            onClick={() => onNavigateToLogin('login')}
-            className="text-xs font-semibold px-4 py-2 hover:bg-elevated/40 border border-transparent rounded-custom text-textSecondary hover:text-textPrimary transition-all duration-150"
-          >
-            Log In
-          </button>
-          <button 
-            onClick={() => onNavigateToLogin('signup')}
-            className="bg-accent hover:bg-accent/90 text-background text-xs font-bold px-4 py-2 rounded-custom transition-all duration-150 shadow-md"
-          >
-            Sign Up
-          </button>
+          <div className="flex items-center space-x-4 ml-2">
+            <button 
+              onClick={() => onNavigateToLogin('login')}
+              className="text-xs font-semibold text-white/80 hover:text-white transition-colors duration-200"
+            >
+              Log In
+            </button>
+            <button 
+              onClick={() => onNavigateToLogin('signup')}
+              className="bg-white text-black text-xs font-bold px-4 py-2 rounded-lg hover:bg-white/90 transition-colors duration-200"
+            >
+              Sign Up
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 md:px-12 max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="pt-32 pb-32 px-6 md:px-12 max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         {/* Left Hero Texts */}
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.1] text-textPrimary">
@@ -104,10 +99,10 @@ export default function LandingPage({ onNavigateToLogin }) {
           <div className="pt-2 flex flex-row items-center space-x-3">
             <button 
               onClick={() => scrollToSection('catalog')}
-              className="flex items-center space-x-2 bg-accent hover:bg-accent/90 text-background text-xs font-bold px-6 py-3.5 rounded-custom transition-all duration-150 shadow-lg"
+              className="group flex items-center space-x-2 bg-white text-black text-xs font-semibold px-7 py-3.5 rounded-lg transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98]"
             >
               <span>Browse Catalog</span>
-              <ArrowRight size={14} strokeWidth={2.5} />
+              <ArrowRight size={14} strokeWidth={2.5} className="transition-transform duration-300 ease-in-out group-hover:translate-x-1" />
             </button>
             <button 
               onClick={() => onNavigateToLogin('signup')}
@@ -118,16 +113,14 @@ export default function LandingPage({ onNavigateToLogin }) {
           </div>
         </div>
 
-        {/* Right Hero Image Placeholder */}
-        <div className="aspect-[4/3] w-full bg-card border border-border rounded-[8px] flex flex-col items-center justify-center p-6 text-center space-y-3 relative overflow-hidden group">
-          <div className="h-12 w-12 rounded-full border border-border bg-elevated/60 flex items-center justify-center text-textSecondary">
-            <Hammer size={20} />
+        {/* Right Hero Live Charts Preview */}
+        <div className="aspect-[4/3] w-full bg-card border border-border rounded-[12px] flex flex-col justify-center p-6 relative overflow-hidden shadow-2xl">
+          <div className="w-full relative z-10 pointer-events-none">
+            <HeroChartPreview />
           </div>
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-textPrimary block">Artisan Workshop Cam Placeholder</span>
-            <span className="text-[10px] text-textMuted font-mono uppercase tracking-widest block">Live Stream Feed Simulation</span>
-          </div>
-          <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-200" />
+          
+          {/* Subtle gradient overlay to make it look embedded */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent pointer-events-none" />
         </div>
       </section>
 

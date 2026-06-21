@@ -191,7 +191,7 @@ async def test_customer_signup_creates_customer_profile(client: AsyncClient, db_
         "phone": "555-9876",
         "address": "789 Customer Ave"
     }
-    response = await client.post("/api/v1/auth/signup", json=signup_data)
+    response = await client.post("/api/v1/auth/signup", data=signup_data)
     assert response.status_code == 201
     res_json = response.json()
     assert res_json["name"] == signup_data["name"]

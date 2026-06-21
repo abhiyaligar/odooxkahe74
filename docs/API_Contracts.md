@@ -42,6 +42,33 @@ This document outlines the core REST API endpoints that the React frontend consu
     }
     ```
 
+### Create User (Admin Only)
+- **`POST /api/v1/auth/users`**
+  - **Description:** Allows SuperAdmin (or StoreAdmin) to create new users and assign roles (e.g., Store Admin, Inventory Manager, Sales User, Business Owner).
+  - **Request Body (JSON):**
+    ```json
+    {
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "password": "securepassword123",
+      "role": "InventoryManager"
+    }
+    ```
+  - **Response (JSON - `201 Created`):**
+    ```json
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "role": "InventoryManager",
+      "is_active": true,
+      "created_at": "2026-06-20T15:00:00"
+    }
+    ```
+  - **Business Rules:**
+    - Only users with `SuperAdmin` (or `StoreAdmin`) role can access this endpoint.
+    - SuperAdmins can create `StoreAdmin`, `InventoryManager`, `SalesUser`, and `BusinessOwner`.
+
 ---
 
 ## 2. Products & Inventory (`/api/v1/products`)

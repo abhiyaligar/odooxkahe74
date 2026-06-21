@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
-from app.models.pg_models import ProductType, ProcurementStrategy, ProcurementType
+from app.models.pg_models import ProductType, ProcurementStrategy, ProcurementType, LedgerReason, ReferenceType
 
 class ProductBase(BaseModel):
     name: str
@@ -38,5 +38,19 @@ class ProductResponse(ProductBase):
     free_to_use_qty: float
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class StockLedgerEntryResponse(BaseModel):
+    id: UUID
+    product_id: UUID
+    change_qty: float
+    reason: LedgerReason
+    reference_type: ReferenceType
+    reference_id: UUID
+    resulting_on_hand_qty: float
+    created_at: datetime
+    created_by: Optional[UUID] = None
+    product_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

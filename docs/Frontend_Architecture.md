@@ -67,7 +67,11 @@ When a **Sales Order** is confirmed:
 - Customer routes (`/portal`) are restricted to users with the `Customer` role.
 - Internal ERP routes (`/dashboard`, `/products`, `/sales`, `/purchase`, `/bom`, `/manufacturing`) are restricted to staff roles and wrapped in the ERP sidebar layout.
 
-## 4. Zustand Mock Database Seed Schema
+## 4. Component Reusability
+
+- The `OrderTrackingStepper` component is extracted from the Customer Portal for maximum reuse. It provides a consistent order tracking visualization and is embedded directly into the Landing page hero section as a live preview (replacing static placeholders) to demonstrate the platform's core tracking capabilities immediately to visitors.
+
+## 5. Zustand Mock Database Seed Schema
 
 The store `erpStore.js` implements a client-side relational mock database seeded with realistic data for the following entities:
 

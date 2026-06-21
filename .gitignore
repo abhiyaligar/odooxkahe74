@@ -1,0 +1,2 @@
+# Ignore root-level hidden directories containing keys/credentials
+hidden/

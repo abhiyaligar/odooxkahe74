@@ -56,9 +56,12 @@ export const api = {
   get: (endpoint) => fetchWithAuth(endpoint, { method: 'GET' }),
   post: (endpoint, body, customHeaders = {}) => fetchWithAuth(endpoint, { 
     method: 'POST', 
-    body: body instanceof URLSearchParams ? body : JSON.stringify(body),
+    body: (body instanceof URLSearchParams || body instanceof FormData) ? body : JSON.stringify(body),
     headers: customHeaders 
   }),
-  put: (endpoint, body) => fetchWithAuth(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
+  put: (endpoint, body) => fetchWithAuth(endpoint, { 
+    method: 'PUT', 
+    body: (body instanceof URLSearchParams || body instanceof FormData) ? body : JSON.stringify(body) 
+  }),
   delete: (endpoint) => fetchWithAuth(endpoint, { method: 'DELETE' }),
 };

@@ -119,6 +119,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
               </div>
             )}
             
+
             {/* Shared Field: Full Name */}
             <div className="flex flex-col space-y-1">
               <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Full Name</label>
