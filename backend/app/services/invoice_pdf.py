@@ -1,4 +1,4 @@
-﻿"""
+"""
 PDF Invoice Generator using ReportLab.
 Generates a professional PDF invoice and returns raw bytes.
 """
@@ -58,7 +58,7 @@ def build_invoice_pdf(
     # ── Header band ────────────────────────────────────────────────────────────
     header_data = [[
         Paragraph(
-            f"<font color='#{BRAND_ACCENT.hexval()[2:]}' size='18'><b>SHIV FURNITURE WORKS</b></font>"
+            f"<font color='#{BRAND_ACCENT.hexval()[2:]}' size='18'><b>AUTOCRAFT</b></font>"
             f"<br/><font size='8' color='#71717a'>Tax Invoice / Receipt</font>",
             ParagraphStyle("hdr", fontName="Helvetica", fontSize=8)
         ),
@@ -172,7 +172,7 @@ def build_invoice_pdf(
     story.append(Spacer(1, 3 * mm))
     story.append(Paragraph(
         "<font size='7' color='#71717a'>This is a computer-generated invoice and does not require a physical signature. "
-        "Shiv Furniture Works — All rights reserved.</font>",
+        "AutoCraft — All rights reserved.</font>",
         ParagraphStyle("footer", alignment=TA_CENTER, fontName="Helvetica", fontSize=7)
     ))
 

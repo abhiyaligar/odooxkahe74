@@ -183,7 +183,7 @@ export default function WalletPage() {
         key: RAZORPAY_KEY_ID,
         amount: amt * 100,
         currency: 'INR',
-        name: 'Shiv Furniture Works',
+        name: 'AutoCraft',
         description: 'Wallet Top-Up',
         order_id: order.razorpay_order_id,
         handler: async (response) => {

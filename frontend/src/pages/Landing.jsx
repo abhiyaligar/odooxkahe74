@@ -54,9 +54,9 @@ export default function LandingPage({ onNavigateToLogin }) {
         {/* Brand Left */}
         <div className="flex items-center gap-[10px] cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <div className="h-8 w-8 rounded-md bg-white text-black flex items-center justify-center font-black text-xs tracking-tighter">
-            SF
+            AC
           </div>
-          <span className="font-bold text-sm tracking-wide text-white uppercase">Shiv Furniture</span>
+          <span className="font-bold text-sm tracking-wide text-white uppercase">AutoCraft</span>
         </div>
 
         {/* Center Links */}
@@ -303,7 +303,7 @@ export default function LandingPage({ onNavigateToLogin }) {
               <div className="h-6 w-6 rounded bg-accent text-background flex items-center justify-center font-black text-[10px] tracking-tighter">
                 SF
               </div>
-              <span className="font-bold text-xs text-textPrimary uppercase">Shiv Furniture Works</span>
+              <span className="font-bold text-xs text-textPrimary uppercase">AutoCraft</span>
             </div>
             <p className="text-[11px] text-textMuted leading-relaxed max-w-xs">
               Artisan woodworking meets robust resource planning automation. Built for Odoo-style hackathon demo showcases.
@@ -354,7 +354,7 @@ export default function LandingPage({ onNavigateToLogin }) {
 
         {/* Copyright Line */}
         <div className="max-w-6xl w-full mx-auto pt-6 flex flex-col md:flex-row items-center justify-between text-[10px] text-textMuted font-mono gap-4">
-          <span>© 2026 Shiv Furniture Works. All rights reserved.</span>
+          <span>© 2026 AutoCraft. All rights reserved.</span>
           <span>Designed with Grayscale minimal SaaS identity frameworks.</span>
         </div>
       </footer>

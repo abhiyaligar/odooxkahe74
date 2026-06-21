@@ -112,9 +112,9 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
         {/* Brand Header */}
         <div className="text-center space-y-1">
           <div className="inline-flex h-8 w-8 items-center justify-center rounded bg-accent text-background font-black text-sm tracking-tighter">
-            SF
+            AC
           </div>
-          <h2 className="text-md font-bold tracking-tight text-textPrimary mt-2">Shiv Furniture Works</h2>
+          <h2 className="text-md font-bold tracking-tight text-textPrimary mt-2">AutoCraft</h2>
           <p className="text-[10px] uppercase tracking-widest text-textSecondary font-semibold">Mini ERP Ecosystem</p>
         </div>
 
@@ -238,7 +238,7 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
 
       {/* Footer */}
       <footer className="mt-8 text-center text-[10px] text-textMuted font-mono">
-        © 2026 Shiv Furniture Works · Built for Odoo Hackathon
+        © 2026 AutoCraft · Built for Odoo Hackathon
       </footer>
     </div>
   );

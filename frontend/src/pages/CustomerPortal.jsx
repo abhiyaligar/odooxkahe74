@@ -307,7 +307,7 @@ export default function CustomerPortal() {
                     <button
                       onClick={() => {
                         setShowUserMenu(false);
-                        if (window.confirm("Sign out of Shiv Furniture Works Customer Portal?")) {
+                        if (window.confirm("Sign out of AutoCraft Customer Portal?")) {
                           logout();
                         }
                       }}
@@ -743,7 +743,7 @@ export default function CustomerPortal() {
                     <Truck size={14} className="text-textMuted shrink-0 mt-0.5" />
                     <div>
                       <span className="text-[10px] font-bold text-textSecondary uppercase tracking-wider block">Fulfillment Agent</span>
-                      <span>Shiv Furniture Works Logistics</span>
+                      <span>AutoCraft Logistics</span>
                     </div>
                   </div>
                 </div>
