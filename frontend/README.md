@@ -1,4 +1,4 @@
-# Shiv Furniture Works Frontend
+# AutoCrafERP Frontend
 
 This is the React + Vite + Tailwind + shadcn/ui frontend client for the Mini ERP system.
 

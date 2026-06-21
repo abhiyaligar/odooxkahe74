@@ -147,7 +147,7 @@ export const Layout = ({ children }) => {
   // Determine current page title
   const currentPath = location.pathname;
   const activeItem = navigationItems.find(item => item.path === currentPath);
-  const pageTitle = activeItem ? activeItem.name : "Shiv Furniture Works";
+  const pageTitle = activeItem ? activeItem.name : "AutoCrafERP";
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-textPrimary">
@@ -170,11 +170,11 @@ export const Layout = ({ children }) => {
         <div className="flex h-16 items-center justify-between border-b border-border px-4 relative">
           {(!isCollapsed || isMobileMenuOpen) ? (
             <div className="flex flex-col">
-              <span className="font-semibold tracking-wide text-sm">SHIV FURNITURE</span>
-              <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono">ERP Works</span>
+              <span className="font-semibold tracking-wide text-sm">AUTOCRAFTERP</span>
+              <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono">Platform</span>
             </div>
           ) : (
-            <span className="mx-auto font-bold text-sm tracking-tighter">SF</span>
+            <span className="mx-auto font-bold text-sm tracking-tighter">AC</span>
           )}
 
           {/* Close button for mobile menu */}
@@ -292,7 +292,7 @@ export const Layout = ({ children }) => {
             {/* Sign Out Button */}
             <button
               onClick={() => {
-                if (window.confirm("Sign out of Shiv Furniture Works ERP?")) {
+                if (window.confirm("Sign out of AutoCrafERP?")) {
                   logout();
                 }
               }}

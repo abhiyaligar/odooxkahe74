@@ -1,4 +1,4 @@
-# Mini ERP — "Shiv Furniture Works"
+# Mini ERP — "AutoCrafERP"
 ## Product Requirements Document (PRD)
 
 **Version:** 1.0
@@ -8,7 +8,7 @@
 
 ## 1. Problem Statement (Plain Summary)
 
-Shiv Furniture Works is a furniture manufacturing company currently run on Excel sheets, WhatsApp messages, manual stock registers, and paper manufacturing notes. This causes:
+AutoCrafERP is a furniture manufacturing company currently run on Excel sheets, WhatsApp messages, manual stock registers, and paper manufacturing notes. This causes:
 
 - Sales selling products without checking real stock
 - Purchase teams not knowing when raw materials are low until it's urgent
