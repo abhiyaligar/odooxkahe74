@@ -99,10 +99,10 @@ export default function LandingPage({ onNavigateToLogin }) {
           <div className="pt-2 flex flex-row items-center space-x-3">
             <button 
               onClick={() => scrollToSection('catalog')}
-              className="flex items-center space-x-2 bg-accent hover:bg-accent/90 text-background text-xs font-bold px-6 py-3.5 rounded-custom transition-all duration-150 shadow-lg"
+              className="group flex items-center space-x-2 bg-white text-black text-xs font-semibold px-7 py-3.5 rounded-lg transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98]"
             >
               <span>Browse Catalog</span>
-              <ArrowRight size={14} strokeWidth={2.5} />
+              <ArrowRight size={14} strokeWidth={2.5} className="transition-transform duration-300 ease-in-out group-hover:translate-x-1" />
             </button>
             <button 
               onClick={() => onNavigateToLogin('signup')}
