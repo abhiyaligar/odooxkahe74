@@ -11,6 +11,7 @@ import {
   Search,
   ShoppingCart
 } from 'lucide-react';
+import { OrderTrackingStepper } from '../components/common/OrderTrackingStepper';
 
 export default function LandingPage({ onNavigateToLogin }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -92,7 +93,7 @@ export default function LandingPage({ onNavigateToLogin }) {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 md:px-12 max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="pt-32 pb-32 px-6 md:px-12 max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         {/* Left Hero Texts */}
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.1] text-textPrimary">
@@ -118,16 +119,21 @@ export default function LandingPage({ onNavigateToLogin }) {
           </div>
         </div>
 
-        {/* Right Hero Image Placeholder */}
-        <div className="aspect-[4/3] w-full bg-card border border-border rounded-[8px] flex flex-col items-center justify-center p-6 text-center space-y-3 relative overflow-hidden group">
-          <div className="h-12 w-12 rounded-full border border-border bg-elevated/60 flex items-center justify-center text-textSecondary">
-            <Hammer size={20} />
+        {/* Right Hero Live Tracking Preview */}
+        <div className="aspect-[4/3] w-full bg-card border border-border rounded-[12px] flex flex-col justify-center p-8 space-y-8 relative overflow-hidden shadow-2xl">
+          <div className="space-y-2 text-center">
+            <span className="text-[10px] font-bold text-accent uppercase tracking-widest block font-mono">Live Tracking Preview</span>
+            <h3 className="text-lg md:text-xl font-bold text-textPrimary tracking-tight flex items-center justify-center">
+              Order #1042 <ArrowRight className="mx-2 text-textMuted" size={16} /> Preparing
+            </h3>
           </div>
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-textPrimary block">Artisan Workshop Cam Placeholder</span>
-            <span className="text-[10px] text-textMuted font-mono uppercase tracking-widest block">Live Stream Feed Simulation</span>
+          
+          <div className="w-full relative z-10 pointer-events-none">
+            <OrderTrackingStepper status="Confirmed" className="shadow-none border-dashed bg-elevated/30" />
           </div>
-          <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-200" />
+          
+          {/* Subtle gradient overlay to make it look embedded */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent pointer-events-none" />
         </div>
       </section>
 
