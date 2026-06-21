@@ -23,7 +23,8 @@ import {
   LogOut,
   Menu,
   X,
-  Wallet
+  Wallet,
+  FileText
 } from 'lucide-react';
 
 export const Layout = ({ children }) => {
@@ -131,6 +132,12 @@ export const Layout = ({ children }) => {
       path: "/wallet",
       icon: Wallet,
       roles: ["SuperAdmin", "StoreAdmin", "SalesUser", "PurchaseUser", "ManufacturingUser", "InventoryManager", "BusinessOwner", "Customer"]
+    },
+    {
+      name: "Invoices",
+      path: "/invoices",
+      icon: FileText,
+      roles: ["SuperAdmin", "StoreAdmin", "SalesUser", "PurchaseUser", "BusinessOwner"]
     }
   ];
 

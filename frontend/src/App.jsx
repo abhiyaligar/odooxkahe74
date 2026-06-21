@@ -31,6 +31,7 @@ import Users from './pages/Users';
 import Profile from './pages/Profile';
 import Customers from './pages/Customers';
 import WalletPage from './pages/Wallet';
+import Invoices from './pages/Invoices';
 
 // Role-based root redirector
 const RootRedirect = () => {
@@ -153,6 +154,7 @@ function AppContent() {
                 </RequireAuth>
               } />
               <Route path="wallet" element={<WalletPage />} />
+              <Route path="invoices" element={<Invoices />} />
               <Route path="profile" element={<Profile />} />
               <Route path="*" element={<RootRedirect />} />
             </Routes>
