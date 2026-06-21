@@ -61,6 +61,8 @@ class Vendor(Base):
     category = Column(Enum(VendorCategory), default=VendorCategory.RawMaterials, nullable=False)
     outstanding_payable = Column(Float, default=0.0, nullable=False)
     payment_terms = Column(Enum(PaymentTerms), default=PaymentTerms.PrePaid, nullable=False)
+    products_supplied = Column(String, nullable=True)
+    rating = Column(Integer, default=5, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class BoM(Base):
