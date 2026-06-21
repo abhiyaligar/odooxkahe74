@@ -1,6 +1,6 @@
-# Mini ERP API: Comprehensive Manual Testing Guide
+# AutoCrafERP: Comprehensive Manual Testing Guide
 
-This documentation provides a step-by-step walkthrough to manually test all workflows of the **Mini ERP API** using **cURL** or the interactive **Swagger UI** (`http://127.0.0.1:8000/docs`).
+This documentation provides a step-by-step walkthrough to manually test all workflows of the **AutoCrafERP API** using **cURL** or the interactive **Swagger UI** (`http://127.0.0.1:8000/docs`).
 
 ---
 
