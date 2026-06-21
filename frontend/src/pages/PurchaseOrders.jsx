@@ -53,9 +53,18 @@ export default function PurchaseOrders() {
 
   // Receipts transaction states
   const [receiptInputs, setReceiptInputs] = useState({});
+  const [paymentMethod, setPaymentMethod] = useState('Wallet');
 
   // Role permissions check (Purchase User, Admin)
   const canModify = currentRole === "SuperAdmin" || currentRole === "StoreAdmin" || currentRole === "PurchaseUser";
+
+  // Store wallet balance — shown as warning when confirming Wallet POs
+  const STORE_WALLET_ID = '00000000-0000-0000-0000-000000000000';
+  const { data: storeWallet } = useQuery({
+    queryKey: ['wallet', STORE_WALLET_ID],
+    queryFn: () => api.get(`/wallets/${STORE_WALLET_ID}`),
+    enabled: canModify,
+  });
 
   // Filter Purchase Orders
   const filteredOrders = purchaseOrders.filter(po => {
@@ -149,6 +158,7 @@ export default function PurchaseOrders() {
     setIsCreating(true);
     setSelectedOrder(null);
     setVendorSelect(vendors[0]?.id || "");
+    setPaymentMethod('Wallet');
     // Default to the first component/raw material
     const firstComp = products.find(p => p.type === "Component") || products[0];
     setOrderLines([{ product_id: firstComp?.id || "", quantity: 1, unit_cost: firstComp?.cost_price || 0 }]);
@@ -201,6 +211,7 @@ export default function PurchaseOrders() {
 
     createPoMutation.mutate({
       vendor_id: vendorSelect,
+      payment_method: paymentMethod,
       lines: orderLines.map(l => ({
         product_id: l.product_id,
         quantity_ordered: Number(l.quantity),
@@ -400,7 +411,7 @@ export default function PurchaseOrders() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right font-mono text-textSecondary">{itemsCount}</td>
-                    <td className="py-3 px-4 text-right font-mono font-semibold">${total.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-right font-mono font-semibold">₹{total.toFixed(2)}</td>
                   </tr>
                 );
               })
@@ -430,6 +441,25 @@ export default function PurchaseOrders() {
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Payment Method */}
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-[11px] font-semibold text-textSecondary uppercase tracking-wider">Payment Method</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full bg-background border border-border rounded-custom px-3 py-2 text-xs text-textPrimary focus:outline-none focus:border-accent"
+              >
+                <option value="Wallet">🏦 Store Wallet (Auto-debit on confirm)</option>
+                <option value="Cash">💵 Cash</option>
+                <option value="Razorpay">💳 Razorpay</option>
+              </select>
+              {paymentMethod === 'Wallet' && storeWallet && (
+                <p className="text-[10px] text-textSecondary mt-1">
+                  Store Wallet Balance: <span className="font-semibold text-accent">₹{Number(storeWallet.balance).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                </p>
+              )}
             </div>
 
             {/* Order lines */}
@@ -549,7 +579,56 @@ export default function PurchaseOrders() {
                     </span>
                   </div>
                 </div>
+
+                {/* Payment method + status */}
+                <div className="flex items-center space-x-3">
+                  <ShoppingCart size={16} className="text-textMuted" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-textMuted font-semibold uppercase">Payment Method</span>
+                    <span className="font-medium text-textPrimary">{selectedOrder.payment_method ?? '—'}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <TrendingUp size={16} className="text-textMuted" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-textMuted font-semibold uppercase">Payment Status</span>
+                    <span className={`font-semibold ${
+                      selectedOrder.payment_status === 'Paid' ? 'text-green-400' :
+                      selectedOrder.payment_status === 'PartiallyPaid' ? 'text-yellow-400' :
+                      'text-red-400'
+                    }`}>
+                      {selectedOrder.payment_status ?? 'Unpaid'}
+                      {selectedOrder.payment_status === 'Paid' && selectedOrder.payment_method === 'Wallet' && ' ✓ Auto-debited'}
+                    </span>
+                  </div>
+                </div>
               </div>
+
+              {/* Wallet balance warning for Draft Wallet POs */}
+              {selectedOrder.status === 'Draft' && selectedOrder.payment_method === 'Wallet' && storeWallet && (() => {
+                const total = getOrderTotal(selectedOrder);
+                const insufficient = storeWallet.balance < total;
+                return (
+                  <div className={`flex items-start gap-2 p-3 rounded-custom border text-xs ${
+                    insufficient
+                      ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                      : 'bg-green-500/10 border-green-500/30 text-green-400'
+                  }`}>
+                    <span className="text-base">{insufficient ? '⚠️' : '✅'}</span>
+                    <div>
+                      <p className="font-semibold">
+                        {insufficient ? 'Insufficient Store Wallet Balance' : 'Store Wallet Funded'}
+                      </p>
+                      <p className="text-[10px] mt-0.5">
+                        Order total: <strong>₹{total.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong> &nbsp;·&nbsp;
+                        Wallet balance: <strong>₹{Number(storeWallet.balance).toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong>
+                        {insufficient && ' — Top-up the store wallet before confirming.'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Order Lines table */}
               <div className="space-y-2">

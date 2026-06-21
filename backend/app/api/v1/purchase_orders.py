@@ -13,7 +13,9 @@ from app.models.pg_models import (
     PurchaseOrderSource,
     PurchaseOrderLine,
     PaymentStatus,
+    PaymentMethod,
     Product,
+    Vendor,
     StockLedgerEntry,
     LedgerReason,
     ReferenceType,
@@ -141,7 +143,72 @@ async def confirm_purchase_order(
     if po.status != PurchaseOrderStatus.Draft:
         raise HTTPException(status_code=400, detail="Only Draft purchase orders can be confirmed")
 
+    # ── Wallet auto-payment ───────────────────────────────────────────────────
+    if po.payment_method == PaymentMethod.Wallet:
+        total_cost = sum(line.quantity_ordered * line.unit_cost for line in po.lines)
+
+        if total_cost > 0:
+            from app.api.v1.wallets import get_or_create_wallet, STORE_WALLET_ID
+            from app.models.pg_models import (
+                WalletTransaction, TransactionType,
+                TransactionStatus, PaymentMethod as WalletPaymentMethod
+            )
+            from datetime import datetime
+
+            store_wallet = await get_or_create_wallet(STORE_WALLET_ID, db)
+
+            # Atomic balance check before touching anything
+            if store_wallet.balance < total_cost:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Insufficient funds in Store Wallet. "
+                        f"Required: ₹{total_cost:,.2f}, "
+                        f"Available: ₹{store_wallet.balance:,.2f}. "
+                        f"Please top-up the store wallet before confirming."
+                    )
+                )
+
+            vendor_wallet = await get_or_create_wallet(po.vendor_id, db)
+
+            # Debit store wallet
+            store_wallet.balance -= total_cost
+            db_debit = WalletTransaction(
+                wallet_id=STORE_WALLET_ID,
+                amount=total_cost,
+                type=TransactionType.PurchasePayment,
+                payment_method=WalletPaymentMethod.Wallet,
+                status=TransactionStatus.Completed,
+                reference_id=str(po.id),
+                created_by=current_user.id
+            )
+            db.add(db_debit)
+
+            # Credit vendor wallet
+            vendor_wallet.balance += total_cost
+            db_credit = WalletTransaction(
+                wallet_id=po.vendor_id,
+                amount=total_cost,
+                type=TransactionType.SaleReceipt,
+                payment_method=WalletPaymentMethod.Wallet,
+                status=TransactionStatus.Completed,
+                reference_id=str(po.id),
+                created_by=current_user.id
+            )
+            db.add(db_credit)
+
+            # Reduce vendor outstanding payable
+            vendor_res = await db.execute(select(Vendor).where(Vendor.id == po.vendor_id))
+            vendor = vendor_res.scalars().first()
+            if vendor:
+                vendor.outstanding_payable = max(0.0, (vendor.outstanding_payable or 0.0) - total_cost)
+
+            po.payment_status = PaymentStatus.Paid
+
+    from datetime import datetime
+    po.confirmed_at = datetime.utcnow()
     po.status = PurchaseOrderStatus.Confirmed
+
     await log_action(
         db=db,
         user=current_user,
@@ -261,6 +328,53 @@ async def cancel_purchase_order(
         raise HTTPException(status_code=404, detail="Purchase Order not found")
     if po.status in [PurchaseOrderStatus.FullyReceived, PurchaseOrderStatus.Cancelled]:
         raise HTTPException(status_code=400, detail="Cannot cancel a fully received or already cancelled purchase order")
+
+    # ── Wallet refund on cancel if payment was already made ───────────────────
+    if po.payment_method == PaymentMethod.Wallet and po.payment_status == PaymentStatus.Paid:
+        total_cost = sum(line.quantity_ordered * line.unit_cost for line in po.lines)
+        if total_cost > 0:
+            from app.api.v1.wallets import get_or_create_wallet, STORE_WALLET_ID
+            from app.models.pg_models import (
+                WalletTransaction, TransactionType,
+                TransactionStatus, PaymentMethod as WalletPaymentMethod
+            )
+
+            store_wallet = await get_or_create_wallet(STORE_WALLET_ID, db)
+            vendor_wallet = await get_or_create_wallet(po.vendor_id, db)
+
+            # Refund store wallet
+            store_wallet.balance += total_cost
+            db_refund = WalletTransaction(
+                wallet_id=STORE_WALLET_ID,
+                amount=total_cost,
+                type=TransactionType.Refund,
+                payment_method=WalletPaymentMethod.Wallet,
+                status=TransactionStatus.Completed,
+                reference_id=str(po.id),
+                created_by=current_user.id
+            )
+            db.add(db_refund)
+
+            # Debit vendor wallet back
+            vendor_wallet.balance = max(0.0, vendor_wallet.balance - total_cost)
+            db_vendor_debit = WalletTransaction(
+                wallet_id=po.vendor_id,
+                amount=total_cost,
+                type=TransactionType.Refund,
+                payment_method=WalletPaymentMethod.Wallet,
+                status=TransactionStatus.Completed,
+                reference_id=str(po.id),
+                created_by=current_user.id
+            )
+            db.add(db_vendor_debit)
+
+            # Restore vendor outstanding payable
+            vendor_res = await db.execute(select(Vendor).where(Vendor.id == po.vendor_id))
+            vendor = vendor_res.scalars().first()
+            if vendor:
+                vendor.outstanding_payable = (vendor.outstanding_payable or 0.0) + total_cost
+
+            po.payment_status = PaymentStatus.Unpaid
 
     old_status = po.status.value if hasattr(po.status, 'value') else str(po.status)
     po.status = PurchaseOrderStatus.Cancelled

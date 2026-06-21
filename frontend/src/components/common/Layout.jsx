@@ -22,7 +22,8 @@ import {
   Activity,
   LogOut,
   Menu,
-  X
+  X,
+  Wallet
 } from 'lucide-react';
 
 export const Layout = ({ children }) => {
@@ -124,6 +125,12 @@ export const Layout = ({ children }) => {
       path: "/audit-logs",
       icon: Activity,
       roles: ["SuperAdmin", "StoreAdmin"]
+    },
+    {
+      name: "Wallet",
+      path: "/wallet",
+      icon: Wallet,
+      roles: ["SuperAdmin", "StoreAdmin", "SalesUser", "PurchaseUser", "ManufacturingUser", "InventoryManager", "BusinessOwner", "Customer"]
     }
   ];
 
