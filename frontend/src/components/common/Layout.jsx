@@ -169,12 +169,25 @@ export const Layout = ({ children }) => {
         {/* Logo Section */}
         <div className="flex h-16 items-center justify-between border-b border-border px-4 relative">
           {(!isCollapsed || isMobileMenuOpen) ? (
-            <div className="flex flex-col">
-              <span className="font-semibold tracking-wide text-sm">AUTOCRAFTERP</span>
-              <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono">Platform</span>
+            <div className="flex flex-col items-start pt-1">
+              <div className="flex items-center gap-2 mb-0.5">
+                <img 
+                  src="/logo.png" 
+                  alt="AutoCrafERP Logo" 
+                  className="h-5 w-auto object-contain dark:invert-0 invert shrink-0" 
+                />
+                <span className="font-bold tracking-wide text-sm leading-none mt-0.5 text-textPrimary inline-block">AUTOCRAFERP</span>
+              </div>
+              <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono mt-0.5">ERP Works</span>
             </div>
           ) : (
-            <span className="mx-auto font-bold text-sm tracking-tighter">AC</span>
+            <div className="mx-auto flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="AC Logo" 
+                className="h-5 w-auto object-contain dark:invert-0 invert shrink-0" 
+              />
+            </div>
           )}
 
           {/* Close button for mobile menu */}
@@ -247,17 +260,13 @@ export const Layout = ({ children }) => {
           {/* Header Action Items */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             
-            {/* Global Search - Hidden on small mobile screens */}
-            <div className="relative w-36 sm:w-64 hidden md:block">
-              <Search className="absolute left-3 top-2.5 text-textMuted" size={14} />
-              <input
-                type="text"
-                placeholder="Global search..."
-                value={globalSearch}
-                onChange={(e) => setGlobalSearch(e.target.value)}
-                className="w-full bg-background border border-border rounded-custom py-1.5 pl-9 pr-3 text-xs text-textPrimary placeholder:text-textMuted focus:outline-none focus:border-accent"
-              />
-            </div>
+            {/* Global Search - Icon */}
+            <button
+              className="p-1.5 rounded-custom border border-transparent hover:bg-elevated/50 text-textSecondary hover:text-textPrimary transition-colors duration-150 flex items-center justify-center shrink-0"
+              title="Global Search"
+            >
+              <Search size={18} />
+            </button>
 
             {/* Theme Toggle Button */}
             <ThemeToggle />

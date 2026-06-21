@@ -11,7 +11,9 @@ import {
   PackageOpen,
   TrendingDown,
   Loader2,
-  Filter
+  Filter,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
@@ -24,6 +26,7 @@ export default function SalesOrders() {
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState("table"); // "table" or "grid"
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [customerFilter, setCustomerFilter] = useState("ALL");
   
@@ -302,14 +305,44 @@ export default function SalesOrders() {
     <div className="space-y-4">
       {/* Search and Action Row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="w-full sm:w-80">
-          <input
-            type="text"
-            placeholder="Search orders (Order # or Customer)..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-card border border-border rounded-custom py-1.5 px-3 text-xs focus:outline-none"
-          />
+        <div className="flex items-center space-x-3 w-full sm:w-auto">
+          <div className="w-full sm:w-80">
+            <input
+              type="text"
+              placeholder="Search orders (Order # or Customer)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-card border border-border rounded-custom py-1.5 px-3 text-xs focus:outline-none"
+            />
+          </div>
+
+          {/* View Switcher */}
+          <div className="flex bg-elevated border border-border p-0.5 rounded-custom text-textSecondary shrink-0">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              title="List View"
+              className={`p-1.5 rounded-custom transition-all duration-150 ${
+                viewMode === 'table'
+                  ? 'bg-card text-textPrimary shadow-sm border border-border/40'
+                  : 'hover:text-textPrimary border border-transparent'
+              }`}
+            >
+              <List size={13} strokeWidth={2.5} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+              className={`p-1.5 rounded-custom transition-all duration-150 ${
+                viewMode === 'grid'
+                  ? 'bg-card text-textPrimary shadow-sm border border-border/40'
+                  : 'hover:text-textPrimary border border-transparent'
+              }`}
+            >
+              <LayoutGrid size={13} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
 
         {canModify && (
@@ -357,71 +390,144 @@ export default function SalesOrders() {
         </div>
       </div>
 
-      {/* Orders List Table */}
-      <div className="w-full border border-border bg-card rounded-custom overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[700px]">
-          <thead>
-            <tr className="bg-elevated/40 border-b border-border text-[11px] font-semibold text-textSecondary uppercase tracking-wider">
-              <th className="py-3 px-4">Order#</th>
-              <th className="py-3 px-4">Customer</th>
-              <th className="py-3 px-4">Date Created</th>
-              <th className="py-3 px-4">Expected Delivery</th>
-              <th className="py-3 px-4 text-center">Status</th>
-              <th className="py-3 px-4 text-right">Items Count</th>
-              <th className="py-3 px-4 text-right">Total Amount</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border text-xs">
-            {isLoadingOrders ? (
-              <tr>
-                <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
-                  <Loader2 className="animate-spin mx-auto mb-2" size={24} />
-                  Loading sales orders...
-                </td>
+      {/* Orders List Table / Grid Wrapper */}
+      {viewMode === "table" ? (
+        <div className="w-full border border-border bg-card rounded-custom overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr className="bg-elevated/40 border-b border-border text-[11px] font-semibold text-textSecondary uppercase tracking-wider">
+                <th className="py-3 px-4">Order#</th>
+                <th className="py-3 px-4">Customer</th>
+                <th className="py-3 px-4">Date Created</th>
+                <th className="py-3 px-4">Expected Delivery</th>
+                <th className="py-3 px-4 text-center">Status</th>
+                <th className="py-3 px-4 text-right">Items Count</th>
+                <th className="py-3 px-4 text-right">Total Amount</th>
               </tr>
-            ) : filteredOrders.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
-                  No sales orders found. Click "+ New Sales Order" to start a commercial transaction.
-                </td>
-              </tr>
-            ) : (
-              filteredOrders.map((so) => {
-                const customer = customers.find(c => c.id === so.customer_id);
-                const itemsCount = getOrderItemCount(so);
-                const total = getOrderTotal(so);
-                
-                return (
-                  <tr 
-                    key={so.id}
-                    onClick={() => handleRowClick(so)}
-                    className="hover:bg-elevated/30 cursor-pointer transition-colors duration-150"
-                  >
-                    <td className="py-3 px-4 font-mono font-medium text-textPrimary">{so.order_number}</td>
-                    <td className="py-3 px-4 text-textSecondary">{customer ? customer.name : 'Unknown'}</td>
-                    <td className="py-3 px-4 text-textSecondary">{new Date(so.created_at).toLocaleDateString()}</td>
-                    <td className="py-3 px-4 text-textSecondary">{so.expected_delivery_date ? new Date(so.expected_delivery_date).toLocaleDateString() : '-'}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
-                        so.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
-                        so.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
-                        so.status === "PartiallyDelivered" ? 'border-warning/40 text-warning bg-warning/5' :
-                        so.status === "FullyDelivered" ? 'border-success/40 text-success bg-success/5' :
-                        'border-danger/40 text-danger bg-danger/5'
-                      }`}>
-                        {so.status === "PartiallyDelivered" ? "Part Shipped" : 
-                         so.status === "FullyDelivered" ? "Shipped" : so.status}
+            </thead>
+            <tbody className="divide-y divide-border text-xs">
+              {isLoadingOrders ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
+                    <Loader2 className="animate-spin mx-auto mb-2" size={24} />
+                    Loading sales orders...
+                  </td>
+                </tr>
+              ) : filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-textMuted font-mono">
+                    No sales orders found. Click "+ New Sales Order" to start a commercial transaction.
+                  </td>
+                </tr>
+              ) : (
+                filteredOrders.map((so) => {
+                  const customer = customers.find(c => c.id === so.customer_id);
+                  const itemsCount = getOrderItemCount(so);
+                  const total = getOrderTotal(so);
+                  
+                  return (
+                    <tr 
+                      key={so.id}
+                      onClick={() => handleRowClick(so)}
+                      className="hover:bg-elevated/30 cursor-pointer transition-colors duration-150"
+                    >
+                      <td className="py-3 px-4 font-mono font-medium text-textPrimary">{so.order_number}</td>
+                      <td className="py-3 px-4 text-textSecondary">{customer ? customer.name : 'Unknown'}</td>
+                      <td className="py-3 px-4 text-textSecondary">{new Date(so.created_at).toLocaleDateString()}</td>
+                      <td className="py-3 px-4 text-textSecondary">{so.expected_delivery_date ? new Date(so.expected_delivery_date).toLocaleDateString() : '-'}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
+                          so.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
+                          so.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
+                          so.status === "PartiallyDelivered" ? 'border-warning/40 text-warning bg-warning/5' :
+                          so.status === "FullyDelivered" ? 'border-success/40 text-success bg-success/5' :
+                          'border-danger/40 text-danger bg-danger/5'
+                        }`}>
+                          {so.status === "PartiallyDelivered" ? "Part Shipped" : 
+                           so.status === "FullyDelivered" ? "Shipped" : so.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-textSecondary">{itemsCount}</td>
+                      <td className="py-3 px-4 text-right font-mono font-semibold">${total.toFixed(2)}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {isLoadingOrders ? (
+            <div className="col-span-full py-8 text-center text-textMuted font-mono bg-card border border-border rounded-custom">
+              <Loader2 className="animate-spin mx-auto mb-2" size={24} />
+              Loading sales orders...
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="col-span-full py-8 text-center text-textMuted font-mono bg-card border border-border rounded-custom">
+              No sales orders found. Click "+ New Sales Order" to start a commercial transaction.
+            </div>
+          ) : (
+            filteredOrders.map((so) => {
+              const customer = customers.find(c => c.id === so.customer_id);
+              const itemsCount = getOrderItemCount(so);
+              const total = getOrderTotal(so);
+
+              return (
+                <div
+                  key={so.id}
+                  onClick={() => handleRowClick(so)}
+                  className="bg-card border border-border rounded-custom p-4 flex flex-col space-y-4 hover:border-textSecondary hover:shadow-md cursor-pointer transition-all duration-150"
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="font-mono font-bold text-xs text-textPrimary">{so.order_number}</span>
+                    <span className={`inline-block text-[9px] font-mono font-bold uppercase rounded-full px-2.5 py-0.5 tracking-wider border ${
+                      so.status === "Draft" ? 'border-border text-textSecondary bg-elevated/30' :
+                      so.status === "Confirmed" ? 'border-warning/40 text-warning bg-warning/5' :
+                      so.status === "PartiallyDelivered" ? 'border-warning/40 text-warning bg-warning/5' :
+                      so.status === "FullyDelivered" ? 'border-success/40 text-success bg-success/5' :
+                      'border-danger/40 text-danger bg-danger/5'
+                    }`}>
+                      {so.status === "PartiallyDelivered" ? "Part Shipped" : 
+                       so.status === "FullyDelivered" ? "Shipped" : so.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[10px] text-textMuted font-bold uppercase tracking-wider">Customer</div>
+                    <div className="text-xs font-semibold text-textPrimary">{customer ? customer.name : 'Unknown'}</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 border-t border-border/40 pt-3">
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Created</span>
+                      <span className="text-xs font-medium text-textSecondary font-mono">{new Date(so.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Delivery Promise</span>
+                      <span className="text-xs font-medium text-textSecondary font-mono">
+                        {so.expected_delivery_date ? new Date(so.expected_delivery_date).toLocaleDateString() : '-'}
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-textSecondary">{itemsCount}</td>
-                    <td className="py-3 px-4 text-right font-mono font-semibold">${total.toFixed(2)}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 border-t border-border pt-3 mt-auto">
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Items Count</span>
+                      <span className="text-xs font-bold text-textSecondary font-mono">{itemsCount}</span>
+                    </div>
+                    <div className="space-y-0.5 text-right">
+                      <span className="text-[9px] text-textMuted uppercase tracking-wide block">Total Amount</span>
+                      <span className="text-sm font-extrabold text-textPrimary font-mono">${total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Detail Slide-over Panel */}
       <SlideOver

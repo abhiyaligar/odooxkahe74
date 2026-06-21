@@ -58,7 +58,7 @@ def build_invoice_pdf(
     # ── Header band ────────────────────────────────────────────────────────────
     header_data = [[
         Paragraph(
-            f"<font color='#{BRAND_ACCENT.hexval()[2:]}' size='18'><b>AUTOCRAFTERP</b></font>"
+            f"<font color='#{BRAND_ACCENT.hexval()[2:]}' size='18'><b>AUTOCRAFERP</b></font>"
             f"<br/><font size='8' color='#71717a'>Tax Invoice / Receipt</font>",
             ParagraphStyle("hdr", fontName="Helvetica", fontSize=8)
         ),
