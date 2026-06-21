@@ -18,6 +18,11 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
 
+  // Email verification states
+  const [step, setStep] = useState('signup'); // 'signup', 'verify'
+  const [verificationCode, setVerificationCode] = useState('');
+  const [notification, setNotification] = useState('');
+
   const validateForm = () => {
     const newErrors = {};
     if (!name) newErrors.name = 'Full Name is required';
@@ -56,6 +61,7 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
 
     setIsLoading(true);
     setErrors({});
+    setNotification('');
     
     try {
       const signupPayload = {
@@ -67,8 +73,45 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
         address,
       };
 
+      // 1. Create account
       await api.post('/auth/signup', signupPayload);
       
+      // 2. Request verification code
+      try {
+        await api.post('/auth/send-verification-code', { email });
+        setNotification('Account created! A verification code has been sent to your email.');
+        setStep('verify');
+      } catch (sendErr) {
+        setErrors({ general: 'Account created, but failed to send verification email. Please log in to try again.' });
+      }
+    } catch (err) {
+      setErrors({ general: err.message || 'Signup failed' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e) => {
+    e.preventDefault();
+    if (isLoading) return;
+
+    if (!verificationCode || verificationCode.length !== 6) {
+      setErrors({ general: 'Please enter a valid 6-digit verification code.' });
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+    setNotification('');
+
+    try {
+      // 1. Verify code
+      await api.post('/auth/verify-email-code', {
+        email,
+        code: verificationCode
+      });
+
+      // 2. Autologin
       const params = new URLSearchParams();
       params.append('username', email);
       params.append('password', password);
@@ -78,7 +121,22 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
       
       onSignupSuccess('Customer');
     } catch (err) {
-      setErrors({ general: err.message || 'Signup failed' });
+      setErrors({ general: err.message || 'Verification failed. Please check the code.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    setErrors({});
+    setNotification('');
+    try {
+      await api.post('/auth/send-verification-code', { email });
+      setNotification('A new verification code has been sent to your email.');
+    } catch (err) {
+      setErrors({ general: err.message || 'Failed to resend verification code.' });
     } finally {
       setIsLoading(false);
     }
@@ -107,19 +165,26 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
             AC
           </div>
           <h2 className="text-md font-bold tracking-tight text-textPrimary mt-2 font-sans">AutoCrafERP</h2>
-          <p className="text-[10px] uppercase tracking-widest text-textSecondary font-semibold">Create your account</p>
+          <p className="text-[10px] uppercase tracking-widest text-textSecondary font-semibold">
+            {step === 'signup' ? 'Create your account' : 'Verify Email Address'}
+          </p>
         </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 animate-all-custom transition-all duration-150">
-            
-            {errors.general && (
-              <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed mb-4">
-                <AlertCircle className="h-4 w-4 shrink-0 text-danger mt-0.5" />
-                <span>{errors.general}</span>
-              </div>
-            )}
-            
+        {errors.general && (
+          <div className="bg-danger/10 border border-danger/20 text-danger p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed mb-4">
+            <AlertCircle className="h-4 w-4 shrink-0 text-danger mt-0.5" />
+            <span>{errors.general}</span>
+          </div>
+        )}
 
+        {notification && (
+          <div className="bg-success/10 border border-success/20 text-success p-3 rounded-custom flex items-start space-x-2 text-[11px] font-mono leading-relaxed mb-4">
+            <Check size={14} className="h-4 w-4 shrink-0 text-success mt-0.5" />
+            <span>{notification}</span>
+          </div>
+        )}
+        {step === 'signup' && (
+          <form onSubmit={handleSubmit} className="space-y-4 animate-all-custom transition-all duration-150">
             {/* Shared Field: Full Name */}
             <div className="flex flex-col space-y-1">
               <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Full Name</label>
@@ -297,8 +362,71 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
                 Already have an account? <span className="underline font-bold">Log In</span>
               </button>
             </div>
-
           </form>
+        )}
+
+        {step === 'verify' && (
+          <form onSubmit={handleVerifySubmit} className="space-y-4">
+            <p className="text-[11px] text-textSecondary leading-relaxed">
+              We have sent a 6-digit email verification code to <strong>{email}</strong>. Enter it below to activate your account.
+            </p>
+
+            {/* Verification Code field */}
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-[10px] font-bold text-textSecondary uppercase tracking-wider">Verification Code</label>
+              <input
+                type="text"
+                placeholder="e.g. 123456"
+                maxLength={6}
+                disabled={isLoading}
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                required
+                className="w-full bg-card border border-border text-xs py-2 px-3 tracking-[0.2em] font-mono text-center font-bold"
+              />
+            </div>
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center bg-accent text-background font-bold text-xs py-2.5 rounded-custom hover:bg-accent/90 disabled:opacity-50 transition-all duration-150"
+            >
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 size={14} className="animate-spin text-background" />
+                  <span>Activating...</span>
+                </div>
+              ) : (
+                <span>Verify & Activate</span>
+              )}
+            </button>
+
+            {/* Resend and go back buttons */}
+            <div className="flex flex-col space-y-3 pt-2 text-center text-[11px]">
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={handleResendCode}
+                className="font-semibold text-textSecondary hover:text-textPrimary transition-colors"
+              >
+                Resend Code
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => {
+                  setStep('signup');
+                  setErrors({});
+                  setNotification('');
+                }}
+                className="text-textSecondary hover:text-textPrimary transition-colors"
+              >
+                &larr; Back to Registration
+              </button>
+            </div>
+          </form>
+        )}
 
       </div>
     </div>

@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 
 from app.db.session import get_db
-from app.models.pg_models import SalesOrder, SalesOrderLine, Product, StockLedgerEntry, LedgerReason, ReferenceType, SalesOrderStatus, User, UserRole
+from app.models.pg_models import SalesOrder, SalesOrderLine, Product, StockLedgerEntry, LedgerReason, ReferenceType, SalesOrderStatus, User, UserRole, Customer
 from app.schemas.sales import SalesOrderCreate, SalesOrderResponse
 from app.api.dependencies import get_current_user, RoleChecker
 from app.services.audit import log_action
@@ -170,6 +170,24 @@ async def confirm_sales_order(order_id: UUID, current_user: User = Depends(write
         new_val="Confirmed"
     )
     await db.commit()
+
+    # Send confirmation email to Customer
+    try:
+        cust_res = await db.execute(select(Customer).where(Customer.id == order.customer_id))
+        customer = cust_res.scalars().first()
+        if customer and customer.email:
+            total_amount = sum(line.quantity_ordered * line.unit_price for line in lines)
+            from app.services.email import send_sales_order_confirmation_email
+            await send_sales_order_confirmation_email(
+                email=customer.email,
+                name=customer.name,
+                order_number=order.order_number,
+                total_amount=total_amount
+            )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error triggering Sales Order confirm email: {e}")
+
     return {"message": "Order confirmed and stock reserved."}
 
 @router.post("/{order_id}/deliver", dependencies=[Depends(write_checker)])

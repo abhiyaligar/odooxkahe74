@@ -90,6 +90,7 @@ async def test_confirm_purchase_order(client: AsyncClient, sample_vendor: Vendor
     # Create PO
     order_data = {
         "vendor_id": str(sample_vendor.id),
+        "payment_method": "Cash",
         "lines": [{"product_id": str(sample_component.id), "quantity_ordered": 20.0}]
     }
     create_res = await client.post("/api/v1/purchase-orders/", json=order_data)
@@ -104,6 +105,7 @@ async def test_receive_purchase_order_line(client: AsyncClient, sample_vendor: V
     # Create and Confirm PO
     order_data = {
         "vendor_id": str(sample_vendor.id),
+        "payment_method": "Cash",
         "lines": [{"product_id": str(sample_component.id), "quantity_ordered": 20.0}]
     }
     create_res = await client.post("/api/v1/purchase-orders/", json=order_data)
