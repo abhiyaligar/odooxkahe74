@@ -1,4 +1,4 @@
-# Shiv Furniture Works — Mini ERP & Customer Portal
+# AutoCrafERP — Mini ERP & Customer Portal
 
 A modern, minimal, flat grayscale SaaS Mini ERP system and Customer-facing portal built for the Odoo-style hackathon. 
 

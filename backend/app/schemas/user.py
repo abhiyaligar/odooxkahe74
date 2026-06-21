@@ -18,6 +18,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
+    is_email_verified: bool = False
     created_at: datetime
     customer_profile: Optional[CustomerResponse] = None
     avatar_url: Optional[str] = None
@@ -42,3 +43,20 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+    new_password: str = Field(..., min_length=8, description="New password must be at least 8 characters")
+
+class SendVerificationCodeRequest(BaseModel):
+    email: EmailStr
+
+class VerifyEmailCodeRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+

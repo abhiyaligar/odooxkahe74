@@ -3,17 +3,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
 from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import List, Optional
+import random
 
 from uuid import UUID
 from app.db.session import get_db
-from app.models.pg_models import User, UserRole, Customer, CustomerCategory
-from app.schemas.user import UserCreate, UserResponse, Token, UserPagedResponse, UserUpdate
+from app.models.pg_models import User, UserRole, Customer, CustomerCategory, VerificationCode, VerificationType
+from app.schemas.user import (
+    UserCreate, UserResponse, Token, UserPagedResponse, UserUpdate,
+    ForgotPasswordRequest, ResetPasswordRequest, SendVerificationCodeRequest, VerifyEmailCodeRequest
+)
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.config import settings
 from app.api.dependencies import get_current_user
 from app.services.gcs import upload_avatar_to_gcs
+from app.services.email import send_verification_email, send_password_reset_email
 
 router = APIRouter()
 
@@ -398,3 +403,119 @@ async def update_me(
         current_user.customer_profile = cust_res.scalars().first()
 
     return current_user
+
+
+# ── Email Verification and Password Reset Endpoints ─────────────────────────
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == req.email))
+    user = result.scalars().first()
+    if not user:
+        return {"message": "If the email is registered, a password reset code has been sent."}
+
+    # Generate 6-digit OTP
+    code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+    db_code = VerificationCode(
+        email=user.email,
+        code=code,
+        type=VerificationType.PasswordReset,
+        expires_at=expires_at
+    )
+    db.add(db_code)
+    await db.commit()
+
+    await send_password_reset_email(email=user.email, name=user.name, code=code)
+
+    return {"message": "If the email is registered, a password reset code has been sent."}
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    # Find matching valid code
+    result = await db.execute(
+        select(VerificationCode)
+        .where(
+            VerificationCode.email == req.email,
+            VerificationCode.code == req.code,
+            VerificationCode.type == VerificationType.PasswordReset,
+            VerificationCode.is_used == False,
+            VerificationCode.expires_at > datetime.utcnow()
+        )
+    )
+    db_code = result.scalars().first()
+    if not db_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset code."
+        )
+
+    # Reset password
+    user_res = await db.execute(select(User).where(User.email == req.email))
+    user = user_res.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password_hash = get_password_hash(req.new_password)
+    db_code.is_used = True
+    await db.commit()
+
+    return {"message": "Password has been reset successfully."}
+
+
+@router.post("/send-verification-code", status_code=status.HTTP_200_OK)
+async def send_email_verification_code(req: SendVerificationCodeRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == req.email))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+
+    db_code = VerificationCode(
+        email=user.email,
+        code=code,
+        type=VerificationType.EmailVerification,
+        expires_at=expires_at
+    )
+    db.add(db_code)
+    await db.commit()
+
+    await send_verification_email(email=user.email, name=user.name, code=code)
+    return {"message": "Verification code has been sent to your email."}
+
+
+@router.post("/verify-email-code", status_code=status.HTTP_200_OK)
+async def verify_email_code(req: VerifyEmailCodeRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(VerificationCode)
+        .where(
+            VerificationCode.email == req.email,
+            VerificationCode.code == req.code,
+            VerificationCode.type == VerificationType.EmailVerification,
+            VerificationCode.is_used == False,
+            VerificationCode.expires_at > datetime.utcnow()
+        )
+    )
+    db_code = result.scalars().first()
+    if not db_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification code."
+        )
+
+    # Set user email as verified
+    user_res = await db.execute(select(User).where(User.email == req.email))
+    user = user_res.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.is_email_verified = True
+    db_code.is_used = True
+    await db.commit()
+
+    return {"message": "Email address verified successfully."}
+

@@ -229,9 +229,9 @@ export default function CustomerPortal() {
         {/* Brand Left */}
         <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setCurrentTab("catalog")}>
           <div className="h-7 w-7 rounded bg-accent text-background flex items-center justify-center font-black text-xs tracking-tighter">
-            SF
+            AC
           </div>
-          <span className="font-semibold text-sm tracking-wide text-textPrimary uppercase">Shiv Store</span>
+          <span className="font-semibold text-sm tracking-wide text-textPrimary uppercase">AutoCrafERP Store</span>
         </div>
 
         {/* Center Links */}
@@ -307,7 +307,7 @@ export default function CustomerPortal() {
                     <button
                       onClick={() => {
                         setShowUserMenu(false);
-                        if (window.confirm("Sign out of Shiv Furniture Works Customer Portal?")) {
+                        if (window.confirm("Sign out of AutoCrafERP Customer Portal?")) {
                           logout();
                         }
                       }}
@@ -743,7 +743,7 @@ export default function CustomerPortal() {
                     <Truck size={14} className="text-textMuted shrink-0 mt-0.5" />
                     <div>
                       <span className="text-[10px] font-bold text-textSecondary uppercase tracking-wider block">Fulfillment Agent</span>
-                      <span>Shiv Furniture Works Logistics</span>
+                      <span>AutoCrafERP Logistics</span>
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
@@ -10,6 +10,21 @@ class WorkOrderBase(BaseModel):
     sequence: int = Field(..., ge=1)
     work_center_id: UUID
 
+    @field_validator('work_center_id', mode='before')
+    @classmethod
+    def validate_work_center_id(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            val_clean = v.strip().lower()
+            if val_clean == "wc1":
+                return UUID("00000000-0000-0000-0000-000000000001")
+            elif val_clean == "wc2":
+                return UUID("00000000-0000-0000-0000-000000000002")
+            elif val_clean == "wc3":
+                return UUID("00000000-0000-0000-0000-000000000003")
+        return v
+
 class WorkOrderCreate(WorkOrderBase):
     pass
 
@@ -17,6 +32,21 @@ class WorkOrderUpdate(BaseModel):
     operation_name: Optional[str] = Field(None, min_length=1, max_length=100)
     sequence: Optional[int] = Field(None, ge=1)
     work_center_id: Optional[UUID] = None
+
+    @field_validator('work_center_id', mode='before')
+    @classmethod
+    def validate_work_center_id(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            val_clean = v.strip().lower()
+            if val_clean == "wc1":
+                return UUID("00000000-0000-0000-0000-000000000001")
+            elif val_clean == "wc2":
+                return UUID("00000000-0000-0000-0000-000000000002")
+            elif val_clean == "wc3":
+                return UUID("00000000-0000-0000-0000-000000000003")
+        return v
 
 class WorkOrderResponse(WorkOrderBase):
     id: UUID

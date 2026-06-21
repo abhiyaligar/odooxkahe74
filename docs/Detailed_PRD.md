@@ -1,6 +1,6 @@
 # Detailed PRD: Mini ERP
 
-This document outlines the detailed product requirements for the Mini ERP system tailored for Shiv Furniture Works.
+This document outlines the detailed product requirements for the Mini ERP system tailored for AutoCrafERP.
 
 ## 1. System Goal
 A centralized Mini ERP that manages Products, Sales, Purchase, Manufacturing, and Bill of Materials (BoM). Every operation automatically updates a single source of truth for inventory, and shortages automatically trigger the correct downstream action (buy more or build more) without manual intervention.

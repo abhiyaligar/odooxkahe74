@@ -53,10 +53,12 @@ export default function LandingPage({ onNavigateToLogin }) {
         
         {/* Brand Left */}
         <div className="flex items-center gap-[10px] cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="h-8 w-8 rounded-md bg-white text-black flex items-center justify-center font-black text-xs tracking-tighter">
-            SF
-          </div>
-          <span className="font-bold text-sm tracking-wide text-white uppercase">Shiv Furniture</span>
+          <img 
+            src="/logo.png" 
+            alt="AutoCrafERP Logo" 
+            className="h-6 md:h-8 w-auto object-contain shrink-0" 
+          />
+          <span className="font-bold text-sm tracking-wide text-white uppercase inline-block">AutoCrafERP</span>
         </div>
 
         {/* Center Links */}
@@ -91,10 +93,10 @@ export default function LandingPage({ onNavigateToLogin }) {
         {/* Left Hero Texts */}
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.1] text-textPrimary">
-            Furniture, made to order — and tracked every step of the way.
+            From raw timber to your doorstep — tracked live.
           </h1>
           <p className="text-sm md:text-base text-textSecondary leading-relaxed max-w-lg">
-            We build architectural solid timber furniture tailored to your design layout. Monitor raw material sourcing, workshop fabrication, and delivery updates in real-time.
+            Every order, every material, every workshop update — visible in real time. No spreadsheets, no guessing where your furniture is.
           </p>
           <div className="pt-2 flex flex-row items-center space-x-3">
             <button 
@@ -299,11 +301,13 @@ export default function LandingPage({ onNavigateToLogin }) {
           
           {/* Tagline Column */}
           <div className="col-span-2 space-y-3">
-            <div className="flex items-center space-x-2">
-              <div className="h-6 w-6 rounded bg-accent text-background flex items-center justify-center font-black text-[10px] tracking-tighter">
-                SF
-              </div>
-              <span className="font-bold text-xs text-textPrimary uppercase">Shiv Furniture Works</span>
+            <div className="flex items-center gap-2 mb-4">
+              <img 
+                src="/logo.png" 
+                alt="AutoCrafERP Logo" 
+                className="h-5 w-auto object-contain shrink-0" 
+              />
+              <span className="font-bold text-xs text-textPrimary uppercase inline-block">AutoCrafERP</span>
             </div>
             <p className="text-[11px] text-textMuted leading-relaxed max-w-xs">
               Artisan woodworking meets robust resource planning automation. Built for Odoo-style hackathon demo showcases.
@@ -354,7 +358,7 @@ export default function LandingPage({ onNavigateToLogin }) {
 
         {/* Copyright Line */}
         <div className="max-w-6xl w-full mx-auto pt-6 flex flex-col md:flex-row items-center justify-between text-[10px] text-textMuted font-mono gap-4">
-          <span>© 2026 Shiv Furniture Works. All rights reserved.</span>
+          <span>© 2026 AutoCrafERP. All rights reserved.</span>
           <span>Designed with Grayscale minimal SaaS identity frameworks.</span>
         </div>
       </footer>

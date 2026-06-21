@@ -222,6 +222,24 @@ async def confirm_purchase_order(
     )
     await db.commit()
     await db.refresh(po, ["lines"])
+
+    # Send confirmation email to Vendor
+    try:
+        vendor_res = await db.execute(select(Vendor).where(Vendor.id == po.vendor_id))
+        vendor = vendor_res.scalars().first()
+        if vendor and vendor.email:
+            total_amount = sum(line.quantity_ordered * line.unit_cost for line in po.lines)
+            from app.services.email import send_purchase_order_confirmation_email
+            await send_purchase_order_confirmation_email(
+                email=vendor.email,
+                name=vendor.name,
+                order_number=po.order_number,
+                total_amount=total_amount
+            )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error triggering Purchase Order confirm email: {e}")
+
     return po
 
 @router.post("/lines/{line_id}/receive", response_model=PurchaseOrderResponse, dependencies=[Depends(write_checker)])

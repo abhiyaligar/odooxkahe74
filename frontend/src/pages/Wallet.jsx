@@ -183,7 +183,7 @@ export default function WalletPage() {
         key: RAZORPAY_KEY_ID,
         amount: amt * 100,
         currency: 'INR',
-        name: 'Shiv Furniture Works',
+        name: 'AutoCrafERP',
         description: 'Wallet Top-Up',
         order_id: order.razorpay_order_id,
         handler: async (response) => {
@@ -271,7 +271,7 @@ export default function WalletPage() {
           </button>
           <button
             onClick={() => setShowTopUp(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-custom text-sm font-medium hover:bg-accent/90 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-custom text-sm font-medium hover:bg-accent/90 transition-colors"
           >
             <Plus size={15} /> Top Up
           </button>
@@ -408,7 +408,7 @@ export default function WalletPage() {
                 {[500, 1000, 5000, 10000, 50000].map(n => (
                   <button key={n} onClick={() => setTopUpAmount(String(n))}
                     className={`text-xs px-3 py-1.5 rounded-custom border transition-colors ${String(topUpAmount) === String(n)
-                      ? 'bg-accent text-white border-accent'
+                      ? 'bg-accent text-accent-foreground border-accent'
                       : 'border-border bg-elevated text-textSecondary hover:text-textPrimary hover:border-accent'}`}>
                     {fmt(n)}
                   </button>
@@ -428,7 +428,7 @@ export default function WalletPage() {
                 Cancel
               </button>
               <button onClick={handleTopUp} disabled={topUpLoading || !topUpAmount}
-                className="flex-1 px-4 py-2 bg-accent text-white rounded-custom text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
+                className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-custom text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
                 {topUpLoading ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
                 {RAZORPAY_KEY_ID ? 'Pay via Razorpay' : 'Add Funds (Mock)'}
               </button>
@@ -491,7 +491,7 @@ export default function WalletPage() {
                 Cancel
               </button>
               <button onClick={handleTransfer} disabled={transferMutation.isPending}
-                className="flex-1 px-4 py-2 bg-accent text-white rounded-custom text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
+                className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-custom text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
                 {transferMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 Transfer
               </button>
