@@ -115,7 +115,7 @@ export default function Invoices() {
             <RefreshCw size={15} />
           </button>
           <button onClick={() => { setShowGenModal(true); setGenType("sales"); setGenOrderId(""); setGenNotes(""); setGenError(""); }}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-custom text-sm font-medium hover:bg-accent/90 transition-colors">
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-custom text-sm font-medium hover:bg-accent/90 transition-colors">
             <Plus size={15} /> Generate Invoice
           </button>
         </div>
@@ -287,7 +287,7 @@ export default function Invoices() {
                 <span className="text-[10px] text-textMuted">Invoice PDF</span>
                 {inv.gcs_url ? (
                   <a href={inv.gcs_url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white rounded-custom text-[11px] font-semibold hover:bg-accent/90 transition-colors shadow-sm">
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-accent-foreground rounded-custom text-[11px] font-semibold hover:bg-accent/90 transition-colors shadow-sm">
                     <Download size={12} /> Download
                   </a>
                 ) : (
@@ -319,7 +319,7 @@ export default function Invoices() {
                 {["sales", "purchase"].map((t) => (
                   <button key={t} onClick={() => { setGenType(t); setGenOrderId(""); }}
                     className={`flex-1 py-2 text-xs font-semibold capitalize transition-colors ${genType === t
-                      ? "bg-accent text-white"
+                      ? "bg-accent text-accent-foreground"
                       : "bg-elevated text-textSecondary hover:text-textPrimary"}`}>
                     {t === "sales" ? "Sales Order" : "Purchase Order"}
                   </button>
@@ -364,7 +364,7 @@ export default function Invoices() {
                 Cancel
               </button>
               <button onClick={handleGenerate} disabled={generateMutation.isPending}
-                className="flex-1 px-4 py-2 bg-accent text-white rounded-custom text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
+                className="flex-1 px-4 py-2 bg-accent text-accent-foreground rounded-custom text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors">
                 {generateMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
                 Generate & Upload
               </button>
