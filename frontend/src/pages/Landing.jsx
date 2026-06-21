@@ -52,11 +52,12 @@ export default function LandingPage({ onNavigateToLogin }) {
       <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-6 md:px-8 py-4 bg-[#0a0a0a] border-b border-white/10">
         
         {/* Brand Left */}
-        <div className="flex items-center gap-[10px] cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="h-8 w-8 rounded-md bg-white text-black flex items-center justify-center font-black text-xs tracking-tighter">
-            AC
-          </div>
-          <span className="font-bold text-sm tracking-wide text-white uppercase">AutoCraft</span>
+        <div className="flex items-center cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <img 
+            src="/logo.png" 
+            alt="AutoCraft" 
+            className="h-6 md:h-8 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen" 
+          />
         </div>
 
         {/* Center Links */}
@@ -299,11 +300,12 @@ export default function LandingPage({ onNavigateToLogin }) {
           
           {/* Tagline Column */}
           <div className="col-span-2 space-y-3">
-            <div className="flex items-center space-x-2">
-              <div className="h-6 w-6 rounded bg-accent text-background flex items-center justify-center font-black text-[10px] tracking-tighter">
-                SF
-              </div>
-              <span className="font-bold text-xs text-textPrimary uppercase">AutoCraft</span>
+            <div className="flex items-center">
+              <img 
+                src="/logo.png" 
+                alt="AutoCraft" 
+                className="h-5 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen" 
+              />
             </div>
             <p className="text-[11px] text-textMuted leading-relaxed max-w-xs">
               Artisan woodworking meets robust resource planning automation. Built for Odoo-style hackathon demo showcases.

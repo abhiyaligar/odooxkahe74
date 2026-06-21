@@ -169,12 +169,22 @@ export const Layout = ({ children }) => {
         {/* Logo Section */}
         <div className="flex h-16 items-center justify-between border-b border-border px-4 relative">
           {(!isCollapsed || isMobileMenuOpen) ? (
-            <div className="flex flex-col">
-              <span className="font-semibold tracking-wide text-sm">AUTOCRAFT</span>
-              <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono">ERP Works</span>
+            <div className="flex flex-col items-start">
+              <img 
+                src="/logo.png" 
+                alt="AutoCraft" 
+                className="h-5 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen mb-1" 
+              />
+              <span className="text-[9px] text-textSecondary uppercase tracking-widest font-mono">ERP Works</span>
             </div>
           ) : (
-            <span className="mx-auto font-bold text-sm tracking-tighter">SF</span>
+            <div className="mx-auto flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="AC" 
+                className="h-4 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen" 
+              />
+            </div>
           )}
 
           {/* Close button for mobile menu */}

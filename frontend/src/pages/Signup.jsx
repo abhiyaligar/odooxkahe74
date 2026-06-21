@@ -102,11 +102,12 @@ export default function SignupPage({ onSignupSuccess, onBackToLogin, onBackToHom
         )}
 
         {/* Brand Header */}
-        <div className="text-center space-y-1">
-          <div className="inline-flex h-8 w-8 items-center justify-center rounded bg-accent text-background font-black text-sm tracking-tighter">
-            AC
-          </div>
-          <h2 className="text-md font-bold tracking-tight text-textPrimary mt-2 font-sans">AutoCraft</h2>
+        <div className="text-center space-y-1 flex flex-col items-center">
+          <img 
+            src="/logo.png" 
+            alt="AutoCraft" 
+            className="h-8 w-auto object-contain invert mix-blend-darken dark:invert-0 dark:mix-blend-screen mb-2" 
+          />
           <p className="text-[10px] uppercase tracking-widest text-textSecondary font-semibold">Create your account</p>
         </div>
 
