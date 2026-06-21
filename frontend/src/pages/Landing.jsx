@@ -93,10 +93,10 @@ export default function LandingPage({ onNavigateToLogin }) {
         {/* Left Hero Texts */}
         <div className="space-y-6">
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.1] text-textPrimary">
-            Furniture, made to order — and tracked every step of the way.
+            From raw timber to your doorstep — tracked live.
           </h1>
           <p className="text-sm md:text-base text-textSecondary leading-relaxed max-w-lg">
-            We build architectural solid timber furniture tailored to your design layout. Monitor raw material sourcing, workshop fabrication, and delivery updates in real-time.
+            Every order, every material, every workshop update — visible in real time. No spreadsheets, no guessing where your furniture is.
           </p>
           <div className="pt-2 flex flex-row items-center space-x-3">
             <button 
