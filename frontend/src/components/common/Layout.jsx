@@ -174,18 +174,18 @@ export const Layout = ({ children }) => {
                 <img 
                   src="/logo.png" 
                   alt="AutoCraft Logo" 
-                  className="h-4 w-auto object-contain dark:invert-0 invert" 
+                  className="h-5 w-auto object-contain dark:invert-0 invert shrink-0" 
                 />
-                <span className="font-semibold tracking-wide text-sm leading-none mt-0.5">AUTOCRAFT</span>
+                <span className="font-bold tracking-wide text-sm leading-none mt-0.5 text-textPrimary inline-block">AUTOCRAFT</span>
               </div>
-              <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono">ERP Works</span>
+              <span className="text-[10px] text-textSecondary uppercase tracking-widest font-mono mt-0.5">ERP Works</span>
             </div>
           ) : (
             <div className="mx-auto flex items-center justify-center">
               <img 
                 src="/logo.png" 
                 alt="AC Logo" 
-                className="h-4 w-auto object-contain dark:invert-0 invert" 
+                className="h-5 w-auto object-contain dark:invert-0 invert shrink-0" 
               />
             </div>
           )}

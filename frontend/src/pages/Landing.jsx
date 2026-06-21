@@ -56,9 +56,9 @@ export default function LandingPage({ onNavigateToLogin }) {
           <img 
             src="/logo.png" 
             alt="AutoCraft Logo" 
-            className="h-6 md:h-8 w-auto object-contain dark:invert-0 invert" 
+            className="h-6 md:h-8 w-auto object-contain shrink-0" 
           />
-          <span className="font-bold text-sm tracking-wide text-white uppercase">AutoCraft</span>
+          <span className="font-bold text-sm tracking-wide text-white uppercase inline-block">AutoCraft</span>
         </div>
 
         {/* Center Links */}
@@ -305,9 +305,9 @@ export default function LandingPage({ onNavigateToLogin }) {
               <img 
                 src="/logo.png" 
                 alt="AutoCraft Logo" 
-                className="h-5 w-auto object-contain dark:invert-0 invert" 
+                className="h-5 w-auto object-contain shrink-0" 
               />
-              <span className="font-bold text-xs text-textPrimary uppercase">AutoCraft</span>
+              <span className="font-bold text-xs text-textPrimary uppercase inline-block">AutoCraft</span>
             </div>
             <p className="text-[11px] text-textMuted leading-relaxed max-w-xs">
               Artisan woodworking meets robust resource planning automation. Built for Odoo-style hackathon demo showcases.
