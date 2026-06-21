@@ -113,9 +113,10 @@ export default function LoginPage({ onLogin, onBack, onSignup }) {
         <div className="text-center space-y-1 flex flex-col items-center">
           <img 
             src="/logo.png" 
-            alt="AutoCraft" 
-            className="h-8 w-auto object-contain dark:invert-0 invert mb-2" 
+            alt="AutoCraft Logo" 
+            className="h-8 w-auto object-contain dark:invert-0 invert mb-1" 
           />
+          <h2 className="text-md font-bold tracking-tight text-textPrimary mt-1">AutoCraft</h2>
           <p className="text-[10px] uppercase tracking-widest text-textSecondary font-semibold">Mini ERP Ecosystem</p>
         </div>
 
